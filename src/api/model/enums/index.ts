@@ -1,3 +1,5 @@
+export type {CompanyStatus} from './CompanyStatus';
+export {CompanyStatus_CONSTANTS} from './CompanyStatus';
 export type {FileType} from './FileType';
 export {FileType_CONSTANTS} from './FileType';
 export type {RequestMethod} from './RequestMethod';

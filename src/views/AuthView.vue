@@ -1,256 +1,337 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { Form as TForm, FormItem as TFormItem, Input as TInput, Button as TButton } from 'tdesign-vue-next'
+import { UserIcon, LockOnIcon, CallIcon } from 'tdesign-icons-vue-next'
+import type { FormInstanceFunctions, FormProps } from 'tdesign-vue-next'
 import { api } from '@/utils/api'
 import { showSuccess, showError, showLoading, hideLoading } from '@/utils/message'
-import { BaseButton, BaseInput } from '@/components/base'
 import type { LoginInput, RegisterInput } from '@/api/model/static'
 
+type LoginFormModel = {
+  username: LoginInput['username']
+  password: LoginInput['password']
+}
+
+type RegisterFormModel = {
+  username: RegisterInput['username']
+  phone?: RegisterInput['phone']
+  password: RegisterInput['password']
+  confirmPassword: string
+}
+
 const router = useRouter()
-const route = useRoute()
-
-// 判断当前是否为移动端路由
-const isMobilePath = route.path.startsWith('/mobile')
-
-// 表单模式：login 或 register
 const mode = ref<'login' | 'register'>('login')
+const loginFormRef = ref<FormInstanceFunctions>()
+const registerFormRef = ref<FormInstanceFunctions>()
 
-// 登录表单数据
-const loginForm = ref<LoginInput>({
+const loginForm = reactive<LoginFormModel>({
   username: '',
   password: '',
 })
 
-// 注册表单数据
-const registerForm = ref<RegisterInput>({
+const registerForm = reactive<RegisterFormModel>({
   username: '',
   phone: '',
   password: '',
+  confirmPassword: '',
 })
 
-// 确认密码
-const confirmPassword = ref('')
-
-// 切换模式
-const toggleMode = () => {
-  mode.value = mode.value === 'login' ? 'register' : 'login'
-  // 清空表单
-  loginForm.value = { username: '', password: '' }
-  registerForm.value = { username: '', phone: '', password: '' }
-  confirmPassword.value = ''
+const loginRules: FormProps['rules'] = {
+  username: [{ required: true, message: '请输入用户名' }],
+  password: [{ required: true, message: '请输入密码' }],
 }
 
-// 处理登录
-const handleLogin = async () => {
-  if (!loginForm.value.username || !loginForm.value.password) {
-    showError('请填写完整的登录信息')
-    return
-  }
+const registerRules: FormProps['rules'] = {
+  username: [{ required: true, message: '请输入用户名' }],
+  phone: [
+    {
+      validator: (val: string) => !val || /^1\d{10}$/.test(val),
+      message: '请输入有效手机号',
+      trigger: 'blur',
+    },
+  ],
+  password: [
+    { required: true, message: '请输入密码' },
+    { min: 6, message: '密码至少6位' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入密码' },
+    {
+      validator: (val: string) => val === registerForm.password,
+      message: '两次输入的密码不一致',
+      trigger: 'blur',
+    },
+  ],
+}
 
+const resetForms = () => {
+  loginForm.username = ''
+  loginForm.password = ''
+  registerForm.username = ''
+  registerForm.phone = ''
+  registerForm.password = ''
+  registerForm.confirmPassword = ''
+  loginFormRef.value?.reset()
+  registerFormRef.value?.reset()
+}
+
+const toggleMode = () => {
+  mode.value = mode.value === 'login' ? 'register' : 'login'
+  resetForms()
+}
+
+const handleLogin = async () => {
   showLoading('登录中...')
 
   try {
     const response = await api.authService.login({
-      input: loginForm.value,
+      input: loginForm,
     })
 
-    hideLoading()
+    if (!response || !response.token) {
+      throw new Error('登录响应格式错误')
+    }
 
-    // 保存 token
     localStorage.setItem('auth_token', response.token)
-    localStorage.setItem('user_id', response.id)
-    localStorage.setItem('user_role', response.role)
+    localStorage.setItem('user_id', response.id || '')
+    localStorage.setItem('user_role', response.role || 'user')
+    if (response.tenant) {
+      localStorage.setItem('auth_tenant', response.tenant)
+    }
 
     showSuccess('登录成功')
-
-    // 跳转到首页（保持移动端/PC端路由）
-    setTimeout(() => {
-      router.push(isMobilePath ? '/mobile' : '/')
-    }, 1000)
+    await router.push('/')
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '登录失败'
+    showError(errorMessage)
+  } finally {
     hideLoading()
-    showError(error instanceof Error ? error.message : '登录失败')
   }
 }
 
-// 处理注册
 const handleRegister = async () => {
-  if (!registerForm.value.username || !registerForm.value.password) {
-    showError('请填写完整的注册信息')
-    return
-  }
-
-  if (registerForm.value.password !== confirmPassword.value) {
-    showError('两次输入的密码不一致')
-    return
-  }
-
-  if (registerForm.value.password.length < 6) {
-    showError('密码长度至少为6位')
-    return
-  }
-
   showLoading('注册中...')
 
   try {
+    const { username, phone, password } = registerForm
     const response = await api.authService.register({
-      input: registerForm.value,
+      input: { username, phone, password },
     })
 
-    hideLoading()
+    if (!response || !response.token) {
+      throw new Error('注册响应格式错误')
+    }
 
-    // 保存 token
     localStorage.setItem('auth_token', response.token)
-    localStorage.setItem('user_id', response.id)
-    localStorage.setItem('user_role', response.role)
+    localStorage.setItem('user_id', response.id || '')
+    localStorage.setItem('user_role', response.role || 'user')
+    if (response.tenant) {
+      localStorage.setItem('auth_tenant', response.tenant)
+    }
 
     showSuccess('注册成功')
-
-    // 跳转到首页（保持移动端/PC端路由）
-    setTimeout(() => {
-      router.push(isMobilePath ? '/mobile' : '/')
-    }, 1000)
+    await router.push('/')
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '注册失败'
+    showError(errorMessage)
+  } finally {
     hideLoading()
-    showError(error instanceof Error ? error.message : '注册失败')
+  }
+}
+
+const onLoginSubmit: FormProps['onSubmit'] = async ({ validateResult, firstError }) => {
+  if (validateResult === true) {
+    await handleLogin()
+  } else {
+    showError(firstError || '请完善登录信息')
+  }
+}
+
+const onRegisterSubmit: FormProps['onSubmit'] = async ({ validateResult, firstError }) => {
+  if (validateResult === true) {
+    await handleRegister()
+  } else {
+    showError(firstError || '请完善注册信息')
   }
 }
 </script>
 
 <template>
-  <div class="auth-container min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 sm:p-6 md:p-8">
-    <!-- PC端容器：限制为屏幕三分之一宽度 -->
-    <div class="w-full" style="max-width: min(90vw, 480px);">
-      <!-- 卡片容器 -->
-      <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 md:p-12">
-        <!-- 标题 -->
-        <div class="text-center mb-6 sm:mb-8">
-          <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-            {{ mode === 'login' ? '欢迎回来' : '创建账户' }}
-          </h1>
-          <p class="text-sm sm:text-base text-gray-500">
-            {{ mode === 'login' ? '登录您的账户' : '注册新账户' }}
-          </p>
-        </div>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>{{ mode === 'login' ? '欢迎回来' : '创建账户' }}</h1>
+        <p>{{ mode === 'login' ? '登录您的账户' : '注册新账户' }}</p>
+      </div>
 
-        <!-- 登录表单 -->
-        <div v-if="mode === 'login'" class="space-y-6" style="padding: 0 20px;">
-          <BaseInput
-            v-model="loginForm.username"
-            label="用户名"
-            placeholder="请输入用户名"
-          />
-          <BaseInput
-            v-model="loginForm.password"
-            type="password"
-            label="密码"
-            placeholder="请输入密码"
-          />
+      <div class="form-wrapper">
+        <TForm
+          v-if="mode === 'login'"
+          ref="loginFormRef"
+          :data="loginForm"
+          :rules="loginRules"
+          colon
+          :label-width="0"
+          :show-error-message="true"
+          @submit="onLoginSubmit"
+        >
+          <TFormItem name="username">
+            <TInput v-model="loginForm.username" size="large" clearable placeholder="请输入用户名">
+              <template #prefix-icon>
+                <UserIcon />
+              </template>
+            </TInput>
+          </TFormItem>
 
-          <BaseButton
-            type="primary"
-            block
-            class="mt-8 submit-btn"
-            style="margin-bottom: 32px;"
-            @click="handleLogin"
-          >
-            登录
-          </BaseButton>
-        </div>
+          <TFormItem name="password">
+            <TInput v-model="loginForm.password" size="large" type="password" clearable placeholder="请输入密码">
+              <template #prefix-icon>
+                <LockOnIcon />
+              </template>
+            </TInput>
+          </TFormItem>
 
-        <!-- 注册表单 -->
-        <div v-else class="space-y-6" style="padding: 0 20px;">
-          <BaseInput
-            v-model="registerForm.username"
-            label="用户名"
-            placeholder="请输入用户名"
-          />
-          <BaseInput
-            v-model="registerForm.phone"
-            type="tel"
-            label="手机号"
-            placeholder="请输入手机号（可选）"
-          />
-          <BaseInput
-            v-model="registerForm.password"
-            type="password"
-            label="密码"
-            placeholder="请输入密码（至少6位）"
-          />
-          <BaseInput
-            v-model="confirmPassword"
-            type="password"
-            label="确认密码"
-            placeholder="请再次输入密码"
-          />
+          <TFormItem>
+            <TButton class="submit-button" theme="primary" type="submit" size="large" block>登录</TButton>
+          </TFormItem>
+        </TForm>
 
-          <BaseButton
-            type="primary"
-            block
-            class="mt-8 submit-btn"
-            style="margin-bottom: 32px;"
-            @click="handleRegister"
-          >
-            注册
-          </BaseButton>
-        </div>
+        <TForm
+          v-else
+          ref="registerFormRef"
+          :data="registerForm"
+          :rules="registerRules"
+          colon
+          :label-width="0"
+          :show-error-message="true"
+          @submit="onRegisterSubmit"
+        >
+          <TFormItem name="username">
+            <TInput v-model="registerForm.username" size="large" clearable placeholder="请输入用户名">
+              <template #prefix-icon>
+                <UserIcon />
+              </template>
+            </TInput>
+          </TFormItem>
 
-        <!-- 切换模式 -->
-        <div class="text-center" style="padding: 0 20px;">
-          <span class="text-sm sm:text-base text-gray-600">
-            {{ mode === 'login' ? '还没有账户？' : '已有账户？' }}
-          </span>
-          <button
-            class="text-sm sm:text-base text-blue-600 hover:text-blue-700 active:text-blue-800 font-medium ml-3 transition-colors underline underline-offset-4"
-            @click="toggleMode"
-          >
-            {{ mode === 'login' ? '立即注册' : '立即登录' }}
-          </button>
-        </div>
+          <TFormItem name="phone">
+            <TInput v-model="registerForm.phone" size="large" type="tel" clearable placeholder="请输入手机号（可选）">
+              <template #prefix-icon>
+                <CallIcon />
+              </template>
+            </TInput>
+          </TFormItem>
+
+          <TFormItem name="password">
+            <TInput
+              v-model="registerForm.password"
+              size="large"
+              type="password"
+              clearable
+              placeholder="请输入密码（至少6位）"
+            >
+              <template #prefix-icon>
+                <LockOnIcon />
+              </template>
+            </TInput>
+          </TFormItem>
+
+          <TFormItem name="confirmPassword">
+            <TInput
+              v-model="registerForm.confirmPassword"
+              size="large"
+              type="password"
+              clearable
+              placeholder="请再次输入密码"
+            >
+              <template #prefix-icon>
+                <LockOnIcon />
+              </template>
+            </TInput>
+          </TFormItem>
+
+          <TFormItem>
+            <TButton class="submit-button" theme="primary" type="submit" size="large" block>注册</TButton>
+          </TFormItem>
+        </TForm>
+      </div>
+
+      <div class="switcher">
+        <span>{{ mode === 'login' ? '还没有账户？' : '已有账户？' }}</span>
+        <a class="switcher-link" href="#" @click.prevent="toggleMode">
+          {{ mode === 'login' ? '立即注册' : '立即登录' }}
+        </a>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 容器样式 */
 .auth-container {
-  position: relative;
-  overflow-x: hidden;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: linear-gradient(135deg, #e8f0ff 0%, #eef2ff 50%, #f7f9ff 100%);
 }
 
-/* 移动端优化 */
-@media (max-width: 640px) {
-  .auth-container {
-    padding: 1rem;
-  }
+.auth-card {
+  width: min(520px, 92vw);
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 18px 48px rgba(24, 41, 82, 0.14);
+  padding: 32px 28px 24px;
 }
 
-/* PC端优化 - 增强卡片样式 */
-@media (min-width: 768px) {
-  .bg-white.rounded-2xl {
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
-    /* 确保卡片不会超过480px */
-    max-width: 480px;
-    margin: 0 auto;
-  }
+.auth-header {
+  text-align: center;
+  margin-bottom: 24px;
 }
 
-/* 提交按钮额外样式 */
-.submit-btn {
-  margin-top: 1.5rem;
+.auth-header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1d1f23;
+  margin-bottom: 8px;
 }
 
-@media (min-width: 640px) {
-  .submit-btn {
-    margin-top: 2rem;
-  }
+.auth-header p {
+  color: #5f6672;
+  font-size: 14px;
 }
 
-/* 触摸设备优化 */
-@media (hover: none) and (pointer: coarse) {
-  button {
-    -webkit-tap-highlight-color: transparent;
-  }
+.switcher {
+  margin-top: 12px;
+  text-align: center;
+  color: #5f6672;
+  font-size: 14px;
+}
+
+.switcher-link {
+  margin-left: 8px;
+  color: #0052d9;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  transition: color 0.2s ease;
+}
+
+.switcher-link:hover {
+  color: #0631ad;
+}
+
+.form-wrapper {
+  width: 360px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.submit-button {
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
 }
 </style>

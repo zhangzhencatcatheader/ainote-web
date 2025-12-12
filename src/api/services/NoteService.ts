@@ -1,16 +1,26 @@
 import type {Executor} from '../';
+import type {CreateNote} from '../model/static/';
 
 /**
  * 笔记服务
- * 提供笔记增删改查相关的REST API接口
- *  
- * 这是一个示例服务，用于演示项目结构
- * 您可以根据实际需要扩展或替换此服务
  */
 export class NoteService {
     
     constructor(private executor: Executor) {}
+    
+    /**
+     * 创建一条笔记
+     */
+    readonly add: (options: NoteServiceOptions['add']) => Promise<
+        string
+    > = async(options) => {
+        let _uri = '/note/add';
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<string>;
+    }
 }
 
 export type NoteServiceOptions = {
+    'add': {
+        readonly body: CreateNote
+    }
 }

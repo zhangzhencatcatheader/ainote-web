@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      tdesign-icons-vue-next:
+        specifier: ^0.4.1
+        version: 0.4.1(vue@3.5.25(typescript@5.9.3))
       tdesign-mobile-vue:
         specifier: ^1.11.1
         version: 1.11.1(vue@3.5.25(typescript@5.9.3))

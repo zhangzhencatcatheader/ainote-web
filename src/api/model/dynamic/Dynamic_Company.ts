@@ -1,7 +1,7 @@
-import type {RoleEnum, UserStatus} from '../enums/';
-import type {Dynamic_AccountCompanyEntity, Dynamic_Company, Dynamic_StaticFile} from './';
+import type {CompanyStatus} from '../enums/';
+import type {Dynamic_Account, Dynamic_AccountCompanyEntity} from './';
 
-export interface Dynamic_Account {
+export interface Dynamic_Company {
     /**
      * The time when the object was created.
      * 
@@ -19,13 +19,13 @@ export interface Dynamic_Account {
      */
     readonly modifiedTime?: string;
     readonly id?: string;
-    readonly username?: string;
-    readonly password?: string;
-    readonly email?: string | undefined;
+    readonly name?: string;
+    readonly code?: string;
     readonly phone?: string | undefined;
-    readonly status?: UserStatus;
-    readonly role?: RoleEnum;
-    readonly avatar?: Dynamic_StaticFile | undefined;
+    readonly address?: string | undefined;
+    readonly contact?: string | undefined;
+    readonly status?: CompanyStatus;
+    readonly tenant?: string;
     readonly accountCompanies?: ReadonlyArray<Dynamic_AccountCompanyEntity>;
-    readonly companies?: ReadonlyArray<Dynamic_Company>;
+    readonly accounts?: ReadonlyArray<Dynamic_Account>;
 }

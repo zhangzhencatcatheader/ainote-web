@@ -1,5 +1,6 @@
 import type {Executor} from '../';
 import type {Dynamic_Log} from '../model/dynamic/';
+import type {LogSpecification, Page} from '../model/static/';
 
 /**
  * 日志服务 - 用于管理审计日志
@@ -27,11 +28,86 @@ export class LogService {
      * 获取所有日志
      * @return 日志列表
      */
-    readonly findAll: () => Promise<
-        ReadonlyArray<Dynamic_Log>
-    > = async() => {
+    readonly findAll: (options: LogServiceOptions['findAll']) => Promise<
+        Page<Dynamic_Log>
+    > = async(options) => {
         let _uri = '/log';
-        return (await this.executor({uri: _uri, method: 'GET'})) as Promise<ReadonlyArray<Dynamic_Log>>;
+        let _separator = _uri.indexOf('?') === -1 ? '?' : '&';
+        let _value: any = undefined;
+        _value = options.specification.action;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'action='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.specification.targetEntity;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'targetEntity='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.specification.entityId;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'entityId='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.specification.ipAddress;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'ipAddress='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.specification.userAgent;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'userAgent='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.specification.requestMethod;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'requestMethod='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.specification.requestUrl;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'requestUrl='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.specification.responseStatus;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'responseStatus='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.specification.errorMessage;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'errorMessage='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.pageNum;
+        _uri += _separator
+        _uri += 'pageNum='
+        _uri += encodeURIComponent(_value);
+        _separator = '&';
+        _value = options.pageSize;
+        _uri += _separator
+        _uri += 'pageSize='
+        _uri += encodeURIComponent(_value);
+        _separator = '&';
+        return (await this.executor({uri: _uri, method: 'GET'})) as Promise<Page<Dynamic_Log>>;
     }
     
     /**
@@ -86,7 +162,11 @@ export class LogService {
 }
 
 export type LogServiceOptions = {
-    'findAll': {}, 
+    'findAll': {
+        readonly pageNum: number, 
+        readonly pageSize: number, 
+        readonly specification: LogSpecification
+    }, 
     'findById': {
         /**
          * 日志ID

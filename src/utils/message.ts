@@ -1,32 +1,14 @@
 import { MessagePlugin, DialogPlugin, LoadingPlugin } from 'tdesign-vue-next'
-import { Toast, Dialog } from 'tdesign-mobile-vue'
-import { isMobileDevice } from './device'
+
+// 用于存储loading实例
+let loadingInstance: any = null
 
 /**
  * 统一的消息提示
  */
 export const showMessage = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
-  if (isMobileDevice()) {
-    // 移动端使用 Toast
-    let theme: 'success' | 'error' | 'warning' | 'loading' = 'success'
-    if (type === 'error') {
-      theme = 'error'
-    } else if (type === 'warning') {
-      theme = 'warning'
-    } else {
-      theme = 'success'
-    }
-    
-    Toast({
-      message,
-      theme,
-      duration: 2000,
-    })
-  } else {
-    // 桌面端使用 Message
-    const messageMethod = MessagePlugin[type] || MessagePlugin.info
-    messageMethod(message)
-  }
+  const messageMethod = MessagePlugin[type] || MessagePlugin.info
+  messageMethod(message)
 }
 
 /**
@@ -61,27 +43,22 @@ export const showInfo = (message: string) => {
  * 加载提示
  */
 export const showLoading = (message: string = '加载中...') => {
-  if (isMobileDevice()) {
-    Toast.loading({
-      message,
-      duration: 0,
-    })
-  } else {
-    LoadingPlugin({
-      text: message,
-      fullscreen: false,
-    })
-  }
+  // 保存loading实例以便后续关闭
+  loadingInstance = LoadingPlugin({
+    text: message,
+    fullscreen: false,
+    preventScrollThrough: true,
+  })
 }
 
 /**
  * 关闭加载提示
  */
 export const hideLoading = () => {
-  if (isMobileDevice()) {
-    Toast.clear()
-  } else {
-    // TDesign Vue Next 的 Loading 会自动关闭，这里不需要手动关闭
+  // 手动关闭loading
+  if (loadingInstance) {
+    loadingInstance.hide()
+    loadingInstance = null
   }
 }
 
@@ -95,28 +72,17 @@ export const showConfirm = (options: {
   cancelText?: string
 }): Promise<boolean> => {
   return new Promise((resolve) => {
-    if (isMobileDevice()) {
-      Dialog.confirm({
-        title: options.title || '提示',
-        content: options.content,
-        confirmBtn: options.confirmText || '确定',
-        cancelBtn: options.cancelText || '取消',
-        onConfirm: () => resolve(true),
-        onCancel: () => resolve(false),
-      })
-    } else {
-      DialogPlugin.confirm({
-        header: options.title || '提示',
-        body: options.content,
-        confirmBtn: options.confirmText || '确定',
-        cancelBtn: options.cancelText || '取消',
-        onConfirm: () => {
-          resolve(true)
-        },
-        onCancel: () => {
-          resolve(false)
-        },
-      })
-    }
+    DialogPlugin.confirm({
+      header: options.title || '提示',
+      body: options.content,
+      confirmBtn: options.confirmText || '确定',
+      cancelBtn: options.cancelText || '取消',
+      onConfirm: () => {
+        resolve(true)
+      },
+      onCancel: () => {
+        resolve(false)
+      },
+    })
   })
 }
