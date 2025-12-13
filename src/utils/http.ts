@@ -13,9 +13,14 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 export const httpExecutor: Executor = async ({ uri, method, headers, body }) => {
   const url = `${API_BASE_URL}${uri}`
   
+  const isFormData = body instanceof FormData
+
   const requestHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...headers,
+  }
+
+  if (!isFormData) {
+    requestHeaders['Content-Type'] = 'application/json'
   }
 
   // 从 localStorage 获取 token
@@ -36,7 +41,7 @@ export const httpExecutor: Executor = async ({ uri, method, headers, body }) => 
   }
 
   if (body) {
-    config.body = JSON.stringify(body)
+    config.body = isFormData ? body : JSON.stringify(body)
   }
 
   try {

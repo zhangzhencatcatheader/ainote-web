@@ -34,41 +34,6 @@ export class LogService {
         let _uri = '/log';
         let _separator = _uri.indexOf('?') === -1 ? '?' : '&';
         let _value: any = undefined;
-        _value = options.specification.action;
-        if (_value !== undefined && _value !== null) {
-            _uri += _separator
-            _uri += 'action='
-            _uri += encodeURIComponent(_value);
-            _separator = '&';
-        }
-        _value = options.specification.targetEntity;
-        if (_value !== undefined && _value !== null) {
-            _uri += _separator
-            _uri += 'targetEntity='
-            _uri += encodeURIComponent(_value);
-            _separator = '&';
-        }
-        _value = options.specification.entityId;
-        if (_value !== undefined && _value !== null) {
-            _uri += _separator
-            _uri += 'entityId='
-            _uri += encodeURIComponent(_value);
-            _separator = '&';
-        }
-        _value = options.specification.ipAddress;
-        if (_value !== undefined && _value !== null) {
-            _uri += _separator
-            _uri += 'ipAddress='
-            _uri += encodeURIComponent(_value);
-            _separator = '&';
-        }
-        _value = options.specification.userAgent;
-        if (_value !== undefined && _value !== null) {
-            _uri += _separator
-            _uri += 'userAgent='
-            _uri += encodeURIComponent(_value);
-            _separator = '&';
-        }
         _value = options.specification.requestMethod;
         if (_value !== undefined && _value !== null) {
             _uri += _separator
@@ -87,13 +52,6 @@ export class LogService {
         if (_value !== undefined && _value !== null) {
             _uri += _separator
             _uri += 'responseStatus='
-            _uri += encodeURIComponent(_value);
-            _separator = '&';
-        }
-        _value = options.specification.errorMessage;
-        if (_value !== undefined && _value !== null) {
-            _uri += _separator
-            _uri += 'errorMessage='
             _uri += encodeURIComponent(_value);
             _separator = '&';
         }

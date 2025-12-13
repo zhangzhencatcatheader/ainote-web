@@ -17,8 +17,10 @@ import { api } from '@/utils/api'
 import { showError, showSuccess } from '@/utils/message'
 import type { UpdateInput } from '@/api/model/static/UpdateInput'
 import type { Dynamic_StaticFile } from '@/api/model/dynamic/Dynamic_StaticFile'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const loading = ref(false)
 const uploadLoading = ref(false)
 
@@ -31,34 +33,34 @@ const formData = ref<UpdateInput>({
 const avatarUrl = ref<string>('')
 const avatarFileId = ref<string>('')
 
-// 构建文件访问URL
-const buildFileUrl = (fileId?: string): string => {
+// 构建文件访问URL，优先使用后端返回的完整路径
+const buildFileUrl = (fileId?: string, filePath?: string): string => {
+  if (filePath) return filePath
   if (!fileId) return ''
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-  // 假设可以通过 /file/{id} 访问文件，实际路径可能需要根据后端调整
   return `${API_BASE_URL}/file/${fileId}`
 }
 
 // 获取用户信息
-const fetchUserInfo = async () => {
+const fetchUserInfo = async (force = false) => {
   loading.value = true
   try {
-    const data = await api.accountService.me()
-    if (data) {
-      formData.value = {
-        id: data.id,
-        username: data.username,
-        phone: data.phone || '',
-        accountCompanies: data.accountCompanies.map((ac) => ({
-          companyId: ac.company.id,
-          role: ac.role,
-        })),
-      }
-      
-      // 如果有头像，获取头像信息
-      // 注意：me接口返回的数据可能不包含avatar，需要单独获取
-      // 这里先留空，如果后端支持可以通过其他接口获取
+    const data = await userStore.fetchProfile(force)
+    if (!data) return
+
+    formData.value = {
+      id: data.id,
+      username: data.username,
+      phone: data.phone || '',
+      accountCompanies: data.accountCompanies.map((ac) => ({
+        companyId: ac.company.id,
+        role: ac.role,
+      })),
     }
+
+    avatarFileId.value = data.avatar?.id || ''
+    avatarUrl.value = buildFileUrl(data.avatar?.id, data.avatar?.filePath)
+    userStore.setProfile(data)
   } catch (error) {
     console.error('获取用户信息失败', error)
     showError('获取用户信息失败，请稍后重试')
@@ -83,7 +85,7 @@ const handleAvatarUpload = async (files: UploadFile | UploadFile[]): Promise<Req
     
     if (result.id) {
       avatarFileId.value = result.id
-      avatarUrl.value = buildFileUrl(result.id)
+      avatarUrl.value = buildFileUrl(result.id, result.filePath)
     }
     
     uploadLoading.value = false
@@ -108,10 +110,8 @@ const handleAvatarSuccess = (context: SuccessContext) => {
   const response = context.response as Dynamic_StaticFile | undefined
   if (response?.id) {
     avatarFileId.value = response.id
-    avatarUrl.value = buildFileUrl(response.id)
+    avatarUrl.value = buildFileUrl(response.id, response.filePath)
     showSuccess('头像上传成功')
-    // 注意：头像文件ID需要保存到用户信息中，但UpdateInput可能不支持avatar字段
-    // 如果后端支持，可以在保存时一并提交
   }
 }
 
@@ -129,6 +129,7 @@ const handleSave = async () => {
         id: formData.value.id,
         username: formData.value.username,
         phone: formData.value.phone || undefined,
+        avatarId: avatarFileId.value || undefined,
         accountCompanies: formData.value.accountCompanies,
       },
     })
@@ -136,7 +137,7 @@ const handleSave = async () => {
     // 更新本地存储的用户名
     localStorage.setItem('user_name', formData.value.username)
     // 刷新用户信息
-    await fetchUserInfo()
+    await fetchUserInfo(true)
   } catch (error) {
     console.error('保存失败', error)
     showError(error instanceof Error ? error.message : '保存失败，请稍后重试')
@@ -210,4 +211,3 @@ onMounted(() => {
   min-height: 100vh;
 }
 </style>
-

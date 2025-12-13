@@ -2,28 +2,33 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/app'
+import { useUserStore } from '@/stores/user'
 import { showConfirm } from '@/utils/message'
 import { clearAuthInfo } from '@/utils/tenant'
-import { api } from '@/utils/api'
 import { HeadMenu, MenuItem, Space, Avatar, Tag, Button } from 'tdesign-vue-next'
 
 const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
+const userStore = useUserStore()
 
 const isLoggedIn = computed(() => !!localStorage.getItem('auth_token'))
 const userId = computed(() => localStorage.getItem('user_id') || '未登录')
 
-const profile = ref<{
-  username?: string
-  role?: string
-  id?: string
-} | null>(null)
+const profile = computed(() => userStore.profile)
+
+const buildFileUrl = (fileId?: string, filePath?: string): string => {
+  if (filePath) return filePath
+  if (!fileId) return ''
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  return `${API_BASE_URL}/file/${fileId}`
+}
 
 const userName = computed(() => profile.value?.username || localStorage.getItem('user_name') || userId.value)
 const userRole = computed(() => profile.value?.role || localStorage.getItem('user_role') || '游客')
 const isAdmin = computed(() => userRole.value === 'ADMIN')
 const avatarText = computed(() => (userName.value || 'AI').substring(0, 1).toUpperCase())
+const userAvatarUrl = computed(() => buildFileUrl(profile.value?.avatar?.id, profile.value?.avatar?.filePath))
 
 const baseMenu = [
   { value: '/', label: '首页', path: '/' },
@@ -75,7 +80,7 @@ const handleLogout = async () => {
   })
   if (confirmed) {
     clearAuthInfo()
-    profile.value = null
+    userStore.clearProfile()
     router.push('/auth')
   }
 }
@@ -83,21 +88,7 @@ const handleLogout = async () => {
 const fetchProfile = async () => {
   if (!isLoggedIn.value) return
   try {
-    const data = await api.accountService.me()
-    if (data) {
-      profile.value = {
-        username: data.username,
-        role: data.role as string,
-        id: data.id,
-      }
-      localStorage.setItem('user_name', data.username)
-      if (data.role) {
-        localStorage.setItem('user_role', data.role as string)
-      }
-      if (data.id) {
-        localStorage.setItem('user_id', data.id)
-      }
-    }
+    await userStore.fetchProfile()
   } catch (error) {
     console.warn('获取用户信息失败', error)
   }
@@ -107,7 +98,7 @@ watch(isLoggedIn, (val) => {
   if (val) {
     fetchProfile()
   } else {
-    profile.value = null
+    userStore.clearProfile()
   }
 })
 
@@ -132,10 +123,19 @@ onMounted(() => {
         <Space size="small" align="center">
           <Tag v-if="isLoggedIn" theme="success" variant="light-outline">已登录</Tag>
           <Tag v-else theme="warning" variant="light-outline">游客</Tag>
-          <Avatar v-if="isLoggedIn" size="medium" shape="circle">{{ avatarText }}</Avatar>
-          <Tag 
-            v-if="isLoggedIn" 
-            theme="primary" 
+          <Avatar
+            v-if="isLoggedIn"
+            size="medium"
+            shape="circle"
+            :image="userAvatarUrl"
+            style="cursor: pointer;"
+            @click="navigateTo('/profile')"
+          >
+            {{ avatarText }}
+          </Avatar>
+          <Tag
+            v-if="isLoggedIn"
+            theme="primary"
             variant="light-outline"
             style="cursor: pointer;"
             @click="navigateTo('/profile')"
