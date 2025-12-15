@@ -72,16 +72,22 @@ export const showConfirm = (options: {
   cancelText?: string
 }): Promise<boolean> => {
   return new Promise((resolve) => {
-    DialogPlugin.confirm({
+    const instance = DialogPlugin.confirm({
       header: options.title || '提示',
       body: options.content,
       confirmBtn: options.confirmText || '确定',
       cancelBtn: options.cancelText || '取消',
       onConfirm: () => {
         resolve(true)
+        instance.hide()
       },
       onCancel: () => {
         resolve(false)
+        instance.hide()
+      },
+      onClose: () => {
+        resolve(false)
+        instance.hide()
       },
     })
   })

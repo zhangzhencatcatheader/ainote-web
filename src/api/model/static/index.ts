@@ -1,3 +1,4 @@
+export type {AccountSearch} from './AccountSearch';
 export type {AffectedTable} from './AffectedTable';
 export type {AuthResponse} from './AuthResponse';
 export type {CompanyAddInput} from './CompanyAddInput';
@@ -8,7 +9,7 @@ export type {JoinCompany_TargetOf_accountCompanies} from './JoinCompany_TargetOf
 export type {KSimpleSaveResult} from './KSimpleSaveResult';
 export type {LogSpecification} from './LogSpecification';
 export type {LoginInput} from './LoginInput';
+export type {NoteSearch} from './NoteSearch';
 export type {Page} from './Page';
 export type {RegisterInput} from './RegisterInput';
 export type {UpdateInput} from './UpdateInput';
-export type {UpdateInput_TargetOf_accountCompanies} from './UpdateInput_TargetOf_accountCompanies';

@@ -9,7 +9,11 @@ import type {LogSpecification, Page} from '../model/static/';
  */
 export class LogService {
     
-    constructor(private executor: Executor) {}
+    private executor: Executor
+
+    constructor(executor: Executor) {
+        this.executor = executor
+    }
     
     /**
      * 根据ID删除日志

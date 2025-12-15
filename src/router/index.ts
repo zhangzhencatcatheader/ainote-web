@@ -13,13 +13,19 @@ const router = createRouter({
       path: '/notes',
       name: 'notes',
       meta: { title: '笔记' },
-      component: () => import('@/views/PlaceholderView.vue'),
+      component: () => import('@/views/NotesView.vue'),
     },
     {
       path: '/notes/create',
       name: 'create-note',
       meta: { title: '新建笔记' },
-      component: () => import('@/views/PlaceholderView.vue'),
+      component: () => import('@/views/NoteCreateView.vue'),
+    },
+    {
+      path: '/notes/:id',
+      name: 'note-detail',
+      meta: { title: '笔记详情' },
+      component: () => import('@/views/NoteDetailView.vue'),
     },
     {
       path: '/search',

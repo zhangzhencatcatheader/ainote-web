@@ -21,15 +21,13 @@ export type AccountDto = {
              */
             readonly fileType?: FileType | undefined;
         } | undefined;
-        readonly companies: ReadonlyArray<{
-            readonly id: string;
-            readonly name: string;
-        }>;
         readonly accountCompanies: ReadonlyArray<{
             readonly id: string;
+            readonly choiceFlag: boolean;
             readonly role: RoleEnum;
             readonly company: {
                 readonly id: string;
+                readonly tenant: string;
                 readonly name: string;
             };
         }>;

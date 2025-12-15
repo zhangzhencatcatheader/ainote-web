@@ -7,7 +7,11 @@ import type {AuthResponse, LoginInput, RegisterInput} from '../model/static/';
  */
 export class AuthService {
     
-    constructor(private executor: Executor) {}
+    private executor: Executor
+
+    constructor(executor: Executor) {
+        this.executor = executor
+    }
     
     /**
      * 用户登录

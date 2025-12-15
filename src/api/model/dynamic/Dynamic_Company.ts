@@ -1,5 +1,5 @@
 import type {CompanyStatus} from '../enums/';
-import type {Dynamic_Account, Dynamic_AccountCompanyEntity} from './';
+import type {Dynamic_AccountCompanyEntity} from './';
 
 export interface Dynamic_Company {
     /**
@@ -27,5 +27,4 @@ export interface Dynamic_Company {
     readonly status?: CompanyStatus;
     readonly tenant?: string;
     readonly accountCompanies?: ReadonlyArray<Dynamic_AccountCompanyEntity>;
-    readonly accounts?: ReadonlyArray<Dynamic_Account>;
 }

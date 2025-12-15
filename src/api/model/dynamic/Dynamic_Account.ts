@@ -1,5 +1,5 @@
 import type {RoleEnum, UserStatus} from '../enums/';
-import type {Dynamic_AccountCompanyEntity, Dynamic_Company, Dynamic_StaticFile} from './';
+import type {Dynamic_AccountCompanyEntity, Dynamic_Note, Dynamic_StaticFile} from './';
 
 export interface Dynamic_Account {
     /**
@@ -27,5 +27,6 @@ export interface Dynamic_Account {
     readonly role?: RoleEnum;
     readonly avatar?: Dynamic_StaticFile | undefined;
     readonly accountCompanies?: ReadonlyArray<Dynamic_AccountCompanyEntity>;
-    readonly companies?: ReadonlyArray<Dynamic_Company>;
+    readonly notes?: ReadonlyArray<Dynamic_Note>;
+    readonly aboutNotes?: ReadonlyArray<Dynamic_Note>;
 }

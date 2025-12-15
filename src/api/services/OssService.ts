@@ -8,7 +8,11 @@ import type {FileType} from '../model/enums/';
  */
 export class OssService {
     
-    constructor(private executor: Executor) {}
+    private executor: Executor
+
+    constructor(executor: Executor) {
+        this.executor = executor
+    }
     
     /**
      * 删除文件

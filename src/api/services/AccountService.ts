@@ -1,7 +1,13 @@
 import type {Executor} from '../';
 import type {AccountDto} from '../model/dto/';
 import type {Dynamic_Account} from '../model/dynamic/';
-import type {JoinCompany, KSimpleSaveResult, UpdateInput} from '../model/static/';
+import type {
+    AccountSearch, 
+    JoinCompany, 
+    KSimpleSaveResult, 
+    Page, 
+    UpdateInput
+} from '../model/static/';
 
 /**
  * 用户服务
@@ -9,7 +15,11 @@ import type {JoinCompany, KSimpleSaveResult, UpdateInput} from '../model/static/
  */
 export class AccountService {
     
-    constructor(private executor: Executor) {}
+    private executor: Executor
+
+    constructor(executor: Executor) {
+        this.executor = executor
+    }
     
     /**
      * 加入企业
@@ -31,6 +41,57 @@ export class AccountService {
         return (await this.executor({uri: _uri, method: 'GET'})) as Promise<AccountDto['AccountService/SIMPLE_ACCOUNT'] | undefined>;
     }
     
+    readonly page: (options: AccountServiceOptions['page']) => Promise<
+        Page<AccountDto['AccountService/SIMPLE_ACCOUNT']>
+    > = async(options) => {
+        let _uri = '/account/page';
+        let _separator = _uri.indexOf('?') === -1 ? '?' : '&';
+        let _value: any = undefined;
+        _value = options.search.keyword;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'keyword='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.search.status;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'status='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.search.role;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'role='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.pageIndex;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'pageIndex='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.pageSize;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'pageSize='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.sortCode;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'sortCode='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        return (await this.executor({uri: _uri, method: 'GET'})) as Promise<Page<AccountDto['AccountService/SIMPLE_ACCOUNT']>>;
+    }
+    
     /**
      * 修改个人信息
      */
@@ -44,6 +105,12 @@ export class AccountService {
 
 export type AccountServiceOptions = {
     'me': {}, 
+    'page': {
+        readonly pageIndex?: number | undefined, 
+        readonly pageSize?: number | undefined, 
+        readonly sortCode?: string | undefined, 
+        readonly search: AccountSearch
+    }, 
     'update': {
         readonly body: UpdateInput
     }, 

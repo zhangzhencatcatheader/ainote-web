@@ -4,7 +4,11 @@ import type {CompanyAddInput, CompanySearch, Page} from '../model/static/';
 
 export class CompanyService {
     
-    constructor(private executor: Executor) {}
+    private executor: Executor
+
+    constructor(executor: Executor) {
+        this.executor = executor
+    }
     
     /**
      * 管理员添加企业
@@ -99,6 +103,13 @@ export class CompanyService {
         if (_value !== undefined && _value !== null) {
             _uri += _separator
             _uri += 'keywords='
+            _uri += encodeURIComponent(_value);
+            _separator = '&';
+        }
+        _value = options.search.contact;
+        if (_value !== undefined && _value !== null) {
+            _uri += _separator
+            _uri += 'contact='
             _uri += encodeURIComponent(_value);
             _separator = '&';
         }

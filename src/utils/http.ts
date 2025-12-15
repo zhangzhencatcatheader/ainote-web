@@ -32,7 +32,7 @@ export const httpExecutor: Executor = async ({ uri, method, headers, body }) => 
   // 从 localStorage 获取 tenant
   const tenant = localStorage.getItem('auth_tenant')
   if (tenant) {
-    requestHeaders['X-Tenant-ID'] = tenant
+    requestHeaders['tenant'] = tenant
   }
 
   const config: RequestInit = {
@@ -95,7 +95,22 @@ export const httpExecutor: Executor = async ({ uri, method, headers, body }) => 
       throw new Error(errorData.message || `HTTP Error: ${response.status}`)
     }
 
-    return await response.json()
+    // Some endpoints (e.g. DELETE) may return 200/204 with an empty body.
+    if (response.status === 204) {
+      return undefined
+    }
+
+    const text = await response.text()
+    if (!text) {
+      return undefined
+    }
+
+    try {
+      return JSON.parse(text)
+    } catch {
+      // If backend returns plain text, keep it as-is
+      return text
+    }
   } catch (error) {
     console.error('HTTP Request Error:', error)
     throw error

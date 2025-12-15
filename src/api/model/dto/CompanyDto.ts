@@ -8,5 +8,7 @@ export type CompanyDto = {
         readonly name: string;
         readonly code: string;
         readonly address?: string | undefined;
+        readonly tenant: string;
+        readonly contact?: string | undefined;
     }
 }
