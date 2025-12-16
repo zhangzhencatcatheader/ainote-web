@@ -4,9 +4,11 @@ import type {Dynamic_LedgerTemplate} from '../model/dynamic/';
 import type {
     ChangeTemplateStatus, 
     CreateTemplate, 
+    CreateTemplateField, 
     KSimpleSaveResult, 
     Page, 
-    SearchTemplate
+    SearchTemplate, 
+    UpdateTemplate
 } from '../model/static/';
 
 /**
@@ -37,6 +39,16 @@ export class TemplateService {
     }
     
     /**
+     * 确认字段创建
+     */
+    readonly createFields: (options: TemplateServiceOptions['createFields']) => Promise<
+        string
+    > = async(options) => {
+        let _uri = '/template/updateFields';
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<string>;
+    }
+    
+    /**
      * 删除模板
      */
     readonly delete: (options: TemplateServiceOptions['delete']) => Promise<
@@ -59,6 +71,16 @@ export class TemplateService {
     }
     
     /**
+     * ai识别文档生成字段
+     */
+    readonly generateFields: (options: TemplateServiceOptions['generateFields']) => Promise<
+        ReadonlyArray<CreateTemplateField>
+    > = async(options) => {
+        let _uri = '/template/generateFields';
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<ReadonlyArray<CreateTemplateField>>;
+    }
+    
+    /**
      * 分页获取当前用户可见的模板列表（带搜索）
      */
     readonly myTemplatePage: (options: TemplateServiceOptions['myTemplatePage']) => Promise<
@@ -67,21 +89,21 @@ export class TemplateService {
         let _uri = '/template/myTemplatePage';
         let _separator = _uri.indexOf('?') === -1 ? '?' : '&';
         let _value: any = undefined;
-        _value = options.search?.keyword;
-        if (_value !== undefined && _value !== null && _value !== '') {
+        _value = options.search.keyword;
+        if (_value !== undefined && _value !== null) {
             _uri += _separator
             _uri += 'keyword='
             _uri += encodeURIComponent(_value);
             _separator = '&';
         }
-        _value = options.search?.category;
-        if (_value !== undefined && _value !== null && _value !== '') {
+        _value = options.search.category;
+        if (_value !== undefined && _value !== null) {
             _uri += _separator
             _uri += 'category='
             _uri += encodeURIComponent(_value);
             _separator = '&';
         }
-        _value = options.search?.enabled;
+        _value = options.search.enabled;
         if (_value !== undefined && _value !== null) {
             _uri += _separator
             _uri += 'enabled='
@@ -121,21 +143,21 @@ export class TemplateService {
         let _uri = '/template/tenantTemplatePage';
         let _separator = _uri.indexOf('?') === -1 ? '?' : '&';
         let _value: any = undefined;
-        _value = options.search?.keyword;
-        if (_value !== undefined && _value !== null && _value !== '') {
+        _value = options.search.keyword;
+        if (_value !== undefined && _value !== null) {
             _uri += _separator
             _uri += 'keyword='
             _uri += encodeURIComponent(_value);
             _separator = '&';
         }
-        _value = options.search?.category;
-        if (_value !== undefined && _value !== null && _value !== '') {
+        _value = options.search.category;
+        if (_value !== undefined && _value !== null) {
             _uri += _separator
             _uri += 'category='
             _uri += encodeURIComponent(_value);
             _separator = '&';
         }
-        _value = options.search?.enabled;
+        _value = options.search.enabled;
         if (_value !== undefined && _value !== null) {
             _uri += _separator
             _uri += 'enabled='
@@ -170,6 +192,12 @@ export class TemplateService {
 export type TemplateServiceOptions = {
     'add': {
         readonly body: CreateTemplate
+    }, 
+    'generateFields': {
+        readonly body: CreateTemplate
+    }, 
+    'createFields': {
+        readonly body: UpdateTemplate
     }, 
     'myTemplatePage': {
         readonly pageIndex?: number | undefined, 

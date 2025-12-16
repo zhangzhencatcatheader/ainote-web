@@ -1,4 +1,4 @@
-import type {FileType, RoleEnum} from '../enums/';
+import type {FileType, RoleEnum, UserStatus} from '../enums/';
 
 export type AccountDto = {
     'AccountService/SIMPLE_ACCOUNT': {
@@ -6,6 +6,7 @@ export type AccountDto = {
         readonly username: string;
         readonly phone?: string | undefined;
         readonly role: RoleEnum;
+        readonly status: UserStatus;
         readonly avatar?: {
             readonly id: string;
             /**

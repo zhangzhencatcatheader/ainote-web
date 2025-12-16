@@ -34,8 +34,6 @@ const baseMenu = [
   { value: '/', label: '首页', path: '/' },
   { value: '/notes', label: '笔记', path: '/notes' },
   { value: '/templates', label: '模板管理', path: '/templates' },
-  { value: '/search', label: '搜索', path: '/search' },
-  { value: '/settings', label: '设置', path: '/settings' },
 ]
 
 const adminMenu = [

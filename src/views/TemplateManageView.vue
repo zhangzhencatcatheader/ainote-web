@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch, h } from 'vue'
+import { useRouter } from 'vue-router'
 import { Button, Card, Descriptions, DescriptionsItem, Dialog, DialogPlugin, Form, FormItem, Image, Input, Pagination, Select, Option, Space, Switch, Table, Tabs, TabPanel } from 'tdesign-vue-next'
 import type { PrimaryTableCol, TableRowData } from 'tdesign-vue-next'
 import WebLayout from '@/components/WebLayout.vue'
@@ -12,6 +13,7 @@ type TemplateRow = {
   category?: string
   description?: string
   enabled: boolean
+  fields?: unknown[]
   icon?: {
     id: string
     filePath: string
@@ -36,6 +38,8 @@ const buildFileUrl = (fileId?: string, filePath?: string) => {
 const loading = ref(false)
 const data = ref<TemplateRow[]>([])
 const total = ref(0)
+
+const router = useRouter()
 
 const tab = ref<'my' | 'tenant'>('my')
 
@@ -450,6 +454,10 @@ const handleView = async (row: TemplateRow) => {
   }
 }
 
+const handleFieldsAction = async (row: TemplateRow) => {
+  router.push(`/templates/${row.id}/edit`)
+}
+
 onMounted(() => {
   fetchList()
 })
@@ -513,6 +521,14 @@ onMounted(() => {
           <template #actions="{ row }">
             <Space v-if="!row.__empty" size="small">
               <Button theme="default" variant="outline" size="small" @click="handleView(row)">查看</Button>
+              <Button
+                theme="primary"
+                variant="outline"
+                size="small"
+                @click="handleFieldsAction(row)"
+              >
+                {{ row.fields && row.fields.length > 0 ? '编辑字段' : '生成字段' }}
+              </Button>
               <Button
                 v-if="tab === 'my'"
                 theme="danger"

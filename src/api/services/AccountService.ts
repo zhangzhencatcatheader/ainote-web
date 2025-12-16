@@ -3,6 +3,7 @@ import type {AccountDto} from '../model/dto/';
 import type {Dynamic_Account} from '../model/dynamic/';
 import type {
     AccountSearch, 
+    ChangeAccountStatusInput, 
     JoinCompany, 
     KSimpleSaveResult, 
     Page, 
@@ -16,6 +17,16 @@ import type {
 export class AccountService {
     
     constructor(private executor: Executor) {}
+    
+    /**
+     * 修改用户状态
+     */
+    readonly changeStatus: (options: AccountServiceOptions['changeStatus']) => Promise<
+        KSimpleSaveResult<Dynamic_Account>
+    > = async(options) => {
+        let _uri = '/account/changeStatus';
+        return (await this.executor({uri: _uri, method: 'PUT', body: options.body})) as Promise<KSimpleSaveResult<Dynamic_Account>>;
+    }
     
     /**
      * 加入企业
@@ -112,5 +123,8 @@ export type AccountServiceOptions = {
     }, 
     'joinCompany': {
         readonly body: JoinCompany
+    }, 
+    'changeStatus': {
+        readonly body: ChangeAccountStatusInput
     }
 }

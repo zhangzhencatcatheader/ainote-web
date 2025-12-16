@@ -28,18 +28,6 @@ const router = createRouter({
       component: () => import('@/views/NoteDetailView.vue'),
     },
     {
-      path: '/search',
-      name: 'search',
-      meta: { title: '搜索' },
-      component: () => import('@/views/PlaceholderView.vue'),
-    },
-    {
-      path: '/settings',
-      name: 'settings',
-      meta: { title: '设置' },
-      component: () => import('@/views/PlaceholderView.vue'),
-    },
-    {
       path: '/analytics',
       name: 'analytics',
       meta: { title: '数据分析' },
@@ -64,6 +52,12 @@ const router = createRouter({
       component: () => import('@/views/TemplateManageView.vue'),
     },
     {
+      path: '/templates/:id/edit',
+      name: 'template-edit',
+      meta: { title: '编辑模板' },
+      component: () => import('@/views/TemplateEditView.vue'),
+    },
+    {
       path: '/admin/company',
       name: 'admin-company',
       meta: { title: '企业管理', requiresAdmin: true },
@@ -73,7 +67,7 @@ const router = createRouter({
       path: '/admin/users',
       name: 'admin-users',
       meta: { title: '用户管理', requiresAdmin: true },
-      component: () => import('@/views/PlaceholderView.vue'),
+      component: () => import('@/views/AdminUsersView.vue'),
     },
     {
       path: '/admin/logs',
@@ -93,6 +87,23 @@ const router = createRouter({
       component: () => import('@/views/ProfileView.vue'),
     },
   ],
+})
+
+router.beforeEach((to) => {
+  const requiresAdmin = Boolean(to.meta?.requiresAdmin)
+  if (!requiresAdmin) return true
+
+  const token = localStorage.getItem('auth_token')
+  if (!token) {
+    return { path: '/auth' }
+  }
+
+  const role = localStorage.getItem('user_role')
+  if (role !== 'ADMIN') {
+    return { path: '/' }
+  }
+
+  return true
 })
 
 export default router
