@@ -14,6 +14,8 @@ export type AllErrors = {
 export type ApiErrors = {
     'accountService': {
     }, 
+    'aiService': {
+    }, 
     'authService': {
         'login': AllErrors & ({
                 family: 'ACCOUNT', 
@@ -40,5 +42,7 @@ export type ApiErrors = {
     'noteService': {
     }, 
     'ossService': {
+    }, 
+    'templateService': {
     }
 };

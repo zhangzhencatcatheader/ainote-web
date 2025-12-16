@@ -58,6 +58,12 @@ const router = createRouter({
       component: () => import('@/views/PlaceholderView.vue'),
     },
     {
+      path: '/templates',
+      name: 'templates',
+      meta: { title: '模板管理' },
+      component: () => import('@/views/TemplateManageView.vue'),
+    },
+    {
       path: '/admin/company',
       name: 'admin-company',
       meta: { title: '企业管理', requiresAdmin: true },

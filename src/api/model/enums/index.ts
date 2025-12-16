@@ -1,7 +1,11 @@
 export type {CompanyStatus} from './CompanyStatus';
 export {CompanyStatus_CONSTANTS} from './CompanyStatus';
+export type {FieldType} from './FieldType';
+export {FieldType_CONSTANTS} from './FieldType';
 export type {FileType} from './FileType';
 export {FileType_CONSTANTS} from './FileType';
+export type {LedgerRecordStatus} from './LedgerRecordStatus';
+export {LedgerRecordStatus_CONSTANTS} from './LedgerRecordStatus';
 export type {RequestMethod} from './RequestMethod';
 export {RequestMethod_CONSTANTS} from './RequestMethod';
 export type {RoleEnum} from './RoleEnum';

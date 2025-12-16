@@ -7,11 +7,7 @@ import type {CreateNote, NoteSearch, Page} from '../model/static/';
  */
 export class NoteService {
     
-    private executor: Executor
-
-    constructor(executor: Executor) {
-        this.executor = executor
-    }
+    constructor(private executor: Executor) {}
     
     /**
      * 创建一条笔记
@@ -33,13 +29,16 @@ export class NoteService {
         _uri += encodeURIComponent(options.id);
         return (await this.executor({uri: _uri, method: 'DELETE'})) as Promise<void>;
     }
-
-    readonly get: (options: NoteServiceOptions['get']) => Promise<
-        NoteDto['NoteService/LIST_NOTE']
+    
+    /**
+     * 获取笔记详情
+     */
+    readonly detail: (options: NoteServiceOptions['detail']) => Promise<
+        NoteDto['NoteService/LIST_NOTE'] | undefined
     > = async(options) => {
         let _uri = '/note/';
         _uri += encodeURIComponent(options.id);
-        return (await this.executor({uri: _uri, method: 'GET'})) as Promise<NoteDto['NoteService/LIST_NOTE']>;
+        return (await this.executor({uri: _uri, method: 'GET'})) as Promise<NoteDto['NoteService/LIST_NOTE'] | undefined>;
     }
     
     /**
@@ -69,13 +68,6 @@ export class NoteService {
         if (_value !== undefined && _value !== null) {
             _uri += _separator
             _uri += 'sort='
-            _uri += encodeURIComponent(_value);
-            _separator = '&';
-        }
-        _value = options.search?.keyword;
-        if (_value !== undefined && _value !== null && _value !== '') {
-            _uri += _separator
-            _uri += 'keyword='
             _uri += encodeURIComponent(_value);
             _separator = '&';
         }
@@ -112,13 +104,6 @@ export class NoteService {
             _uri += encodeURIComponent(_value);
             _separator = '&';
         }
-        _value = options.search?.keyword;
-        if (_value !== undefined && _value !== null && _value !== '') {
-            _uri += _separator
-            _uri += 'keyword='
-            _uri += encodeURIComponent(_value);
-            _separator = '&';
-        }
         return (await this.executor({uri: _uri, method: 'GET'})) as Promise<Page<NoteDto['NoteService/LIST_NOTE']>>;
     }
 }
@@ -127,9 +112,6 @@ export type NoteServiceOptions = {
     'add': {
         readonly body: CreateNote
     }, 
-    'get': {
-        readonly id: string
-    },
     'myNotePage': {
         readonly pageIndex?: number | undefined, 
         readonly pageSize?: number | undefined, 
@@ -141,6 +123,9 @@ export type NoteServiceOptions = {
         readonly pageSize?: number | undefined, 
         readonly sort?: string | undefined, 
         readonly search: NoteSearch
+    }, 
+    'detail': {
+        readonly id: string
     }, 
     'delete': {
         readonly id: string

@@ -1,6 +1,10 @@
 export type {Dynamic_Account} from './Dynamic_Account';
 export type {Dynamic_AccountCompanyEntity} from './Dynamic_AccountCompanyEntity';
 export type {Dynamic_Company} from './Dynamic_Company';
+export type {Dynamic_LedgerRecord} from './Dynamic_LedgerRecord';
+export type {Dynamic_LedgerRecordValue} from './Dynamic_LedgerRecordValue';
+export type {Dynamic_LedgerTemplate} from './Dynamic_LedgerTemplate';
+export type {Dynamic_LedgerTemplateField} from './Dynamic_LedgerTemplateField';
 export type {Dynamic_Log} from './Dynamic_Log';
 export type {Dynamic_Note} from './Dynamic_Note';
 export type {Dynamic_StaticFile} from './Dynamic_StaticFile';

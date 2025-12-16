@@ -15,11 +15,7 @@ import type {
  */
 export class AccountService {
     
-    private executor: Executor
-
-    constructor(executor: Executor) {
-        this.executor = executor
-    }
+    constructor(private executor: Executor) {}
     
     /**
      * 加入企业

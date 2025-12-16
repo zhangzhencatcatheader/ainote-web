@@ -4,11 +4,7 @@ import type {CompanyAddInput, CompanySearch, Page} from '../model/static/';
 
 export class CompanyService {
     
-    private executor: Executor
-
-    constructor(executor: Executor) {
-        this.executor = executor
-    }
+    constructor(private executor: Executor) {}
     
     /**
      * 管理员添加企业
