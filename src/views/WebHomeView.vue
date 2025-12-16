@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
-import { showConfirm } from '@/utils/message'
+import { showConfirm, showError } from '@/utils/message'
 import { getCurrentTenant } from '@/utils/tenant'
-import { Card, Row, Col, Button, Divider, Space } from 'tdesign-vue-next'
+import { Card, Row, Col, Button, Divider, Space, Dialog, Form, FormItem, Input, Select, Option, MessagePlugin } from 'tdesign-vue-next'
 import WebLayout from '@/components/WebLayout.vue'
+import { api } from '@/utils/api'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -15,6 +16,116 @@ const userId = computed(() => localStorage.getItem('user_id') || '未登录')
 const userRole = computed(() => localStorage.getItem('user_role') || '游客')
 const tenantId = computed(() => getCurrentTenant() || '未指定')
 const isAdmin = computed(() => userRole.value === 'ADMIN')
+
+const companyName = ref<string>('')
+const companyRole = ref<string>('')
+const needJoinCompany = ref(false)
+
+type CompanyNameRow = {
+  id: string
+  name: string
+}
+
+const joinDialogVisible = ref(false)
+const joinLoading = ref(false)
+const joinSelectedCompanyId = ref('')
+const companyOptions = ref<CompanyNameRow[]>([])
+
+const filteredCompanyOptions = computed(() => {
+  return companyOptions.value
+})
+
+const fetchCompanyNames = async () => {
+  joinLoading.value = true
+  try {
+    companyOptions.value = (await api.companyService.allCompanyNames()) as CompanyNameRow[]
+  } catch (e) {
+    console.error('获取企业名称列表失败', e)
+    showError('获取企业列表失败，请稍后再试')
+  } finally {
+    joinLoading.value = false
+  }
+}
+
+const openJoinDialog = async () => {
+  joinDialogVisible.value = true
+  joinSelectedCompanyId.value = ''
+  if (!companyOptions.value.length) {
+    await fetchCompanyNames()
+  }
+}
+
+const handleJoinCompany = async () => {
+  if (!joinSelectedCompanyId.value) {
+    showError('请选择企业')
+    return
+  }
+
+  joinLoading.value = true
+  try {
+    await api.accountService.joinCompany({
+      body: {
+        accountCompanies: [
+          {
+            companyId: joinSelectedCompanyId.value,
+            role: 'USER',
+          },
+        ],
+      },
+    })
+    MessagePlugin.success('加入成功')
+    await loadCompanyState()
+    joinDialogVisible.value = false
+  } catch (e) {
+    console.error('加入企业失败', e)
+    const msg = e instanceof Error ? e.message : '加入企业失败'
+    showError(msg)
+  } finally {
+    joinLoading.value = false
+  }
+}
+
+const loadCompanyState = async () => {
+  if (!isLoggedIn.value) {
+    companyName.value = ''
+    companyRole.value = ''
+    needJoinCompany.value = false
+    joinDialogVisible.value = false
+    return
+  }
+
+  try {
+    const me = await api.accountService.me()
+    // 后端异常或未返回 me 时，不做“强制加入企业”的判断，避免误弹窗
+    if (!me) {
+      joinDialogVisible.value = false
+      needJoinCompany.value = false
+      return
+    }
+
+    const companies = me.accountCompanies || []
+
+    if (!companies.length) {
+      companyName.value = ''
+      companyRole.value = ''
+      needJoinCompany.value = true
+      return
+    }
+
+    needJoinCompany.value = false
+
+    const active = companies.find((c) => c.choiceFlag) || companies[0]
+    companyName.value = active?.company?.name || ''
+    companyRole.value = (active?.role as string) || ''
+
+    const tenant = active?.company?.tenant
+    if (tenant) {
+      localStorage.setItem('auth_tenant', tenant)
+    }
+  } catch (e) {
+    console.error('加载企业状态失败', e)
+  }
+}
 
 const stats = ref([
   { label: '总笔记', value: '128', desc: '累计创建', icon: '📒' },
@@ -50,11 +161,35 @@ const navigateTo = (path: string) => {
   }
   router.push(path)
 }
+
+onMounted(() => {
+  loadCompanyState()
+})
 </script>
 
 <template>
   <WebLayout>
     <div class="content">
+      <Dialog
+        v-model:visible="joinDialogVisible"
+        header="加入企业"
+        confirm-btn="加入"
+        :close-btn="false"
+        :cancel-btn="null"
+        :close-on-esc-keydown="false"
+        :close-on-overlay-click="false"
+        :confirm-loading="joinLoading"
+        @confirm="handleJoinCompany"
+      >
+        <Form colon :label-width="80">
+          <FormItem label="选择企业">
+            <Select v-model="joinSelectedCompanyId" filterable clearable placeholder="请选择企业">
+              <Option v-for="c in filteredCompanyOptions" :key="c.id" :value="c.id" :label="c.name" />
+            </Select>
+          </FormItem>
+        </Form>
+      </Dialog>
+
       <Row :gutter="[16, 16]">
         <Col :span="9">
           <Card bordered hover-shadow>
@@ -80,6 +215,29 @@ const navigateTo = (path: string) => {
                 <div>
                   <div class="status-label">认证</div>
                   <div class="status-value">{{ isLoggedIn ? '已登录' : '未登录' }}</div>
+                </div>
+              </div>
+              <div class="status-item">
+                <span class="status-icon">🏢</span>
+                <div>
+                  <div class="status-label">企业</div>
+                  <div class="status-value">{{ companyName || (isLoggedIn ? '未加入' : '-') }}</div>
+                </div>
+              </div>
+              <div v-if="needJoinCompany" class="status-item">
+                <span class="status-icon">➕</span>
+                <div style="width: 100%">
+                  <div class="status-label">操作</div>
+                  <Button theme="primary" size="small" :loading="joinLoading" @click="openJoinDialog">
+                    加入企业
+                  </Button>
+                </div>
+              </div>
+              <div class="status-item">
+                <span class="status-icon">🪪</span>
+                <div>
+                  <div class="status-label">企业角色</div>
+                  <div class="status-value">{{ companyRole || (isLoggedIn ? '-' : '-') }}</div>
                 </div>
               </div>
               <div class="status-item">

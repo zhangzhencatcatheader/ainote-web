@@ -59,6 +59,13 @@ export class CompanyService {
         return (await this.executor({uri: _uri, method: 'POST'})) as Promise<string>;
     }
     
+    readonly allCompanyNames: () => Promise<
+        ReadonlyArray<CompanyDto['CompanyService/COMPANY_NAME']>
+    > = async() => {
+        let _uri = '/company/names';
+        return (await this.executor({uri: _uri, method: 'GET'})) as Promise<ReadonlyArray<CompanyDto['CompanyService/COMPANY_NAME']>>;
+    }
+    
     /**
      * 管理员删除企业
      */
@@ -154,5 +161,6 @@ export type CompanyServiceOptions = {
     'delete': {
         readonly id: string
     }, 
-    'myCompany': {}
+    'myCompany': {}, 
+    'allCompanyNames': {}
 }
