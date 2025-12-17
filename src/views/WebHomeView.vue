@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import { showConfirm, showError } from '@/utils/message'
 import { getCurrentTenant } from '@/utils/tenant'
-import { Card, Row, Col, Button, Divider, Space, Dialog, Form, FormItem, Input, Select, Option, MessagePlugin } from 'tdesign-vue-next'
+import { Card, Row, Col, Button, Divider, Space, Dialog, Form, FormItem, Select, Option, MessagePlugin } from 'tdesign-vue-next'
 import WebLayout from '@/components/WebLayout.vue'
 import { api } from '@/utils/api'
 
@@ -12,10 +12,19 @@ const router = useRouter()
 const appStore = useAppStore()
 
 const isLoggedIn = computed(() => !!localStorage.getItem('auth_token'))
-const userId = computed(() => localStorage.getItem('user_id') || '未登录')
 const userRole = computed(() => localStorage.getItem('user_role') || '游客')
 const tenantId = computed(() => getCurrentTenant() || '未指定')
 const isAdmin = computed(() => userRole.value === 'ADMIN')
+
+const routeMetaByPath = computed(() => {
+  const map = new Map<string, Record<string, any>>()
+  for (const r of router.getRoutes()) {
+    if (r.path) {
+      map.set(r.path, (r.meta || {}) as Record<string, any>)
+    }
+  }
+  return map
+})
 
 const companyName = ref<string>('')
 const companyRole = ref<string>('')
@@ -136,15 +145,26 @@ const stats = ref([
 
 const quickActions = ref([
   { icon: '📝', title: '新建笔记', desc: '快速记录灵感', path: '/notes/create' },
-  { icon: '🔍', title: '搜索', desc: '全文检索与过滤', path: '/search' },
-  { icon: '📊', title: '分析', desc: '统计与趋势', path: '/analytics' },
-  { icon: '⚙️', title: '设置', desc: '偏好与安全', path: '/settings' },
-  { icon: '👥', title: '团队', desc: '共享与权限', path: '/team' },
-  { icon: '🔖', title: '标签', desc: '管理分类标签', path: '/tags' },
-  { icon: '🏢', title: '企业管理', desc: '租户与企业', path: '/admin/company', adminOnly: true },
-  { icon: '🧑‍💼', title: '用户管理', desc: '成员与权限', path: '/admin/users', adminOnly: true },
-  { icon: '📜', title: '日志管理', desc: '系统审计', path: '/admin/logs', adminOnly: true },
+  { icon: '📚', title: '我的笔记', desc: '进入笔记列表', path: '/notes' },
+  { icon: '🧩', title: '模板管理', desc: '管理与复用模板', path: '/templates' },
+  { icon: '👤', title: '个人信息', desc: '查看与修改资料', path: '/profile' },
+  { icon: '🏢', title: '企业管理', desc: '租户与企业', path: '/admin/company' },
+  { icon: '🧑‍💼', title: '用户管理', desc: '成员与权限', path: '/admin/users' },
+  { icon: '📜', title: '日志管理', desc: '系统审计', path: '/admin/logs' },
 ])
+
+const visibleQuickActions = computed(() => {
+  return quickActions.value.filter((action) => {
+    const meta = routeMetaByPath.value.get(action.path)
+    if (!meta) {
+      return false
+    }
+    if (meta.requiresAdmin && !isAdmin.value) {
+      return false
+    }
+    return true
+  })
+})
 
 const shortcuts = ref([
   { title: '最近打开', items: ['项目规划', '会议记录', '学习清单'] },
@@ -156,7 +176,11 @@ const navigateTo = (path: string) => {
     showConfirm({
       title: '需要登录',
       content: '请先登录后继续操作，是否前往登录？',
-    }).then((ok) => ok && router.push('/auth'))
+    }).then((ok) => {
+      if (ok) {
+        router.push('/auth')
+      }
+    })
     return
   }
   router.push(path)
@@ -282,12 +306,8 @@ onMounted(() => {
         <Col :span="9">
           <Card bordered hover-shadow title="快捷功能" subtitle="桌面端优先布局">
             <Row :gutter="[16, 16]">
-              <Col v-for="action in quickActions" :key="action.title" :span="3">
-                <div
-                  v-if="!action.adminOnly || isAdmin"
-                  class="action-card"
-                  @click="navigateTo(action.path)"
-                >
+              <Col v-for="action in visibleQuickActions" :key="action.title" :span="3">
+                <div class="action-card" @click="navigateTo(action.path)">
                   <div class="action-icon">{{ action.icon }}</div>
                   <div class="action-title">{{ action.title }}</div>
                   <div class="action-desc">{{ action.desc }}</div>

@@ -1,5 +1,10 @@
 import type {Executor} from '../';
-import type {AuthResponse, LoginInput, RegisterInput} from '../model/static/';
+import type {
+    AuthResponse, 
+    AuthService_CaptchaResponse, 
+    LoginInput, 
+    RegisterInput
+} from '../model/static/';
 
 /**
  * 认证服务
@@ -8,6 +13,13 @@ import type {AuthResponse, LoginInput, RegisterInput} from '../model/static/';
 export class AuthService {
     
     constructor(private executor: Executor) {}
+    
+    readonly captcha: () => Promise<
+        AuthService_CaptchaResponse
+    > = async() => {
+        let _uri = '/auth/captcha';
+        return (await this.executor({uri: _uri, method: 'GET'})) as Promise<AuthService_CaptchaResponse>;
+    }
     
     /**
      * 用户登录
@@ -19,19 +31,7 @@ export class AuthService {
         AuthResponse
     > = async(options) => {
         let _uri = '/auth/login';
-        let _separator = _uri.indexOf('?') === -1 ? '?' : '&';
-        let _value: any = undefined;
-        _value = options.input.username;
-        _uri += _separator
-        _uri += 'username='
-        _uri += encodeURIComponent(_value);
-        _separator = '&';
-        _value = options.input.password;
-        _uri += _separator
-        _uri += 'password='
-        _uri += encodeURIComponent(_value);
-        _separator = '&';
-        return (await this.executor({uri: _uri, method: 'POST'})) as Promise<AuthResponse>;
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<AuthResponse>;
     }
     
     /**
@@ -44,26 +44,7 @@ export class AuthService {
         AuthResponse
     > = async(options) => {
         let _uri = '/auth/register';
-        let _separator = _uri.indexOf('?') === -1 ? '?' : '&';
-        let _value: any = undefined;
-        _value = options.input.username;
-        _uri += _separator
-        _uri += 'username='
-        _uri += encodeURIComponent(_value);
-        _separator = '&';
-        _value = options.input.phone;
-        if (_value !== undefined && _value !== null) {
-            _uri += _separator
-            _uri += 'phone='
-            _uri += encodeURIComponent(_value);
-            _separator = '&';
-        }
-        _value = options.input.password;
-        _uri += _separator
-        _uri += 'password='
-        _uri += encodeURIComponent(_value);
-        _separator = '&';
-        return (await this.executor({uri: _uri, method: 'POST'})) as Promise<AuthResponse>;
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<AuthResponse>;
     }
 }
 
@@ -72,12 +53,13 @@ export type AuthServiceOptions = {
         /**
          * 登录信息（用户名和密码）
          */
-        readonly input: LoginInput
+        readonly body: LoginInput
     }, 
     'register': {
         /**
          * 注册信息（用户名、密码等）
          */
-        readonly input: RegisterInput
-    }
+        readonly body: RegisterInput
+    }, 
+    'captcha': {}
 }

@@ -3,6 +3,7 @@ export type {AffectedTable} from './AffectedTable';
 export type {AiChatRequest} from './AiChatRequest';
 export type {AiChatResponse} from './AiChatResponse';
 export type {AuthResponse} from './AuthResponse';
+export type {AuthService_CaptchaResponse} from './AuthService_CaptchaResponse';
 export type {ChangeAccountStatusInput} from './ChangeAccountStatusInput';
 export type {ChangeTemplateStatus} from './ChangeTemplateStatus';
 export type {CompanyAddInput} from './CompanyAddInput';

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Form as TForm, FormItem as TFormItem, Input as TInput, Button as TButton } from 'tdesign-vue-next'
 import { UserIcon, LockOnIcon, CallIcon } from 'tdesign-icons-vue-next'
@@ -11,6 +11,8 @@ import type { LoginInput, RegisterInput } from '@/api/model/static'
 type LoginFormModel = {
   username: LoginInput['username']
   password: LoginInput['password']
+  verCode: LoginInput['verCode']
+  verKey: LoginInput['verKey']
 }
 
 type RegisterFormModel = {
@@ -18,6 +20,8 @@ type RegisterFormModel = {
   phone?: RegisterInput['phone']
   password: RegisterInput['password']
   confirmPassword: string
+  verCode: RegisterInput['verCode']
+  verKey: RegisterInput['verKey']
 }
 
 const router = useRouter()
@@ -28,6 +32,8 @@ const registerFormRef = ref<FormInstanceFunctions>()
 const loginForm = reactive<LoginFormModel>({
   username: '',
   password: '',
+  verCode: '',
+  verKey: '',
 })
 
 const registerForm = reactive<RegisterFormModel>({
@@ -35,11 +41,42 @@ const registerForm = reactive<RegisterFormModel>({
   phone: '',
   password: '',
   confirmPassword: '',
+  verCode: '',
+  verKey: '',
 })
+
+const captchaImageRaw = ref('')
+
+const captchaImageSrc = computed(() => {
+  const raw = captchaImageRaw.value
+  if (!raw) {
+    return ''
+  }
+  if (raw.startsWith('data:image')) {
+    return raw
+  }
+  return `data:image/png;base64,${raw}`
+})
+
+const refreshCaptcha = async () => {
+  try {
+    const resp = await api.authService.captcha()
+    loginForm.verKey = resp.key || ''
+    registerForm.verKey = resp.key || ''
+    captchaImageRaw.value = resp.image || ''
+
+    loginForm.verCode = ''
+    registerForm.verCode = ''
+  } catch (e) {
+    console.error('获取验证码失败', e)
+    showError('获取验证码失败，请稍后重试')
+  }
+}
 
 const loginRules: FormProps['rules'] = {
   username: [{ required: true, message: '请输入用户名' }],
   password: [{ required: true, message: '请输入密码' }],
+  verCode: [{ required: true, message: '请输入验证码' }],
 }
 
 const registerRules: FormProps['rules'] = {
@@ -63,17 +100,23 @@ const registerRules: FormProps['rules'] = {
       trigger: 'blur',
     },
   ],
+  verCode: [{ required: true, message: '请输入验证码' }],
 }
 
 const resetForms = () => {
   loginForm.username = ''
   loginForm.password = ''
+  loginForm.verCode = ''
+  loginForm.verKey = ''
   registerForm.username = ''
   registerForm.phone = ''
   registerForm.password = ''
   registerForm.confirmPassword = ''
+  registerForm.verCode = ''
+  registerForm.verKey = ''
   loginFormRef.value?.reset()
   registerFormRef.value?.reset()
+  refreshCaptcha()
 }
 
 const toggleMode = () => {
@@ -86,7 +129,7 @@ const handleLogin = async () => {
 
   try {
     const response = await api.authService.login({
-      input: loginForm,
+      body: loginForm,
     })
 
     if (!response || !response.token) {
@@ -114,9 +157,9 @@ const handleRegister = async () => {
   showLoading('注册中...')
 
   try {
-    const { username, phone, password } = registerForm
+    const { username, phone, password, verCode, verKey } = registerForm
     const response = await api.authService.register({
-      input: { username, phone, password },
+      body: { username, phone, password, verCode, verKey },
     })
 
     if (!response || !response.token) {
@@ -155,6 +198,10 @@ const onRegisterSubmit: FormProps['onSubmit'] = async ({ validateResult, firstEr
     showError(firstError || '请完善注册信息')
   }
 }
+
+onMounted(() => {
+  refreshCaptcha()
+})
 </script>
 
 <template>
@@ -192,6 +239,17 @@ const onRegisterSubmit: FormProps['onSubmit'] = async ({ validateResult, firstEr
             </TInput>
           </TFormItem>
 
+          <TFormItem name="verCode">
+            <div class="captcha-row">
+              <TInput v-model="loginForm.verCode" size="large" clearable placeholder="请输入验证码">
+                <template #prefix-icon>
+                  <CallIcon />
+                </template>
+              </TInput>
+              <img v-if="captchaImageSrc" class="captcha-image" :src="captchaImageSrc" alt="captcha" @click="refreshCaptcha" />
+            </div>
+          </TFormItem>
+
           <TFormItem>
             <TButton class="submit-button" theme="primary" type="submit" size="large" block>登录</TButton>
           </TFormItem>
@@ -221,6 +279,17 @@ const onRegisterSubmit: FormProps['onSubmit'] = async ({ validateResult, firstEr
                 <CallIcon />
               </template>
             </TInput>
+          </TFormItem>
+
+          <TFormItem name="verCode">
+            <div class="captcha-row">
+              <TInput v-model="registerForm.verCode" size="large" clearable placeholder="请输入验证码">
+                <template #prefix-icon>
+                  <CallIcon />
+                </template>
+              </TInput>
+              <img v-if="captchaImageSrc" class="captcha-image" :src="captchaImageSrc" alt="captcha" @click="refreshCaptcha" />
+            </div>
           </TFormItem>
 
           <TFormItem name="password">
@@ -313,10 +382,24 @@ const onRegisterSubmit: FormProps['onSubmit'] = async ({ validateResult, firstEr
   margin-left: 8px;
   color: #0052d9;
   font-weight: 600;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-  transition: color 0.2s ease;
+  text-decoration: none;
+}
+
+.captcha-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.captcha-image {
+  width: 110px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e6e8ee;
+  cursor: pointer;
+  object-fit: contain;
+  background: #fff;
 }
 
 .switcher-link:hover {

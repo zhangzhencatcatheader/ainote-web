@@ -10,6 +10,9 @@ export type AllErrors = {
     } | {
         family: 'ACCOUNT', 
         code: 'PASSWORD_IS_ERROR'
+    } | {
+        family: 'ACCOUNT', 
+        code: 'CAPTCHA_IS_ERROR'
     };
 export type ApiErrors = {
     'accountService': {
@@ -32,6 +35,10 @@ export type ApiErrors = {
             } | {
                 family: 'ACCOUNT', 
                 code: 'PASSWORD_IS_ERROR', 
+                readonly [key:string]: any
+            } | {
+                family: 'ACCOUNT', 
+                code: 'CAPTCHA_IS_ERROR', 
                 readonly [key:string]: any
             })
     }, 
