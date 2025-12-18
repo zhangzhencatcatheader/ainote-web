@@ -202,8 +202,8 @@ const setCountdown = (seconds: number) => {
 }
 
 const handleSendSms = async () => {
-  const validate = await smsLoginFormRef.value?.validate?.()
-  if (validate !== true) {
+  const phone = (smsLoginForm.phone || '').trim()
+  if (!/^1\d{10}$/.test(phone)) {
     showError('请先输入正确的手机号')
     return
   }
@@ -216,7 +216,7 @@ const handleSendSms = async () => {
   try {
     await api.authService.sendSms({
       body: {
-        phone: smsLoginForm.phone,
+        phone,
         scene: SMS_SCENE,
       },
     })
