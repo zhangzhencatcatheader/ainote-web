@@ -3,6 +3,8 @@
  * 用于处理多租户相关的操作
  */
 
+import type { AuthResponse } from '@/api/model/static'
+
 /**
  * 获取当前tenant ID
  */
@@ -51,6 +53,17 @@ export const getAuthInfo = () => {
     userId: localStorage.getItem('user_id'),
     userRole: localStorage.getItem('user_role'),
     tenant: getCurrentTenant(),
+  }
+}
+
+export const setAuthInfo = (auth: AuthResponse): void => {
+  localStorage.setItem('auth_token', auth.token || '')
+  localStorage.setItem('user_id', auth.id || '')
+  localStorage.setItem('user_role', auth.role || 'user')
+  if (auth.tenant) {
+    setCurrentTenant(auth.tenant)
+  } else {
+    clearTenant()
   }
 }
 

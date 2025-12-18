@@ -3,7 +3,10 @@ import type {
     AuthResponse, 
     AuthService_CaptchaResponse, 
     LoginInput, 
-    RegisterInput
+    RegisterInput, 
+    SendSmsCodeInput, 
+    SmsLoginInput, 
+    SmsVerifyCodeService_SmsSendResult
 } from '../model/static/';
 
 /**
@@ -46,6 +49,20 @@ export class AuthService {
         let _uri = '/auth/register';
         return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<AuthResponse>;
     }
+    
+    readonly sendSms: (options: AuthServiceOptions['sendSms']) => Promise<
+        SmsVerifyCodeService_SmsSendResult
+    > = async(options) => {
+        let _uri = '/auth/sms/send';
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<SmsVerifyCodeService_SmsSendResult>;
+    }
+    
+    readonly smsLogin: (options: AuthServiceOptions['smsLogin']) => Promise<
+        AuthResponse
+    > = async(options) => {
+        let _uri = '/auth/sms/login';
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<AuthResponse>;
+    }
 }
 
 export type AuthServiceOptions = {
@@ -60,6 +77,12 @@ export type AuthServiceOptions = {
          * 注册信息（用户名、密码等）
          */
         readonly body: RegisterInput
+    }, 
+    'sendSms': {
+        readonly body: SendSmsCodeInput
+    }, 
+    'smsLogin': {
+        readonly body: SmsLoginInput
     }, 
     'captcha': {}
 }

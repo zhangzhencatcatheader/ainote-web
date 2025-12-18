@@ -6,6 +6,9 @@ export type AllErrors = {
         code: 'USERNAME_DOES_NOT_EXIST'
     } | {
         family: 'ACCOUNT', 
+        code: 'PHONE_DOES_NOT_EXIST'
+    } | {
+        family: 'ACCOUNT', 
         code: 'UNAUTHORIZED'
     } | {
         family: 'ACCOUNT', 
@@ -13,6 +16,15 @@ export type AllErrors = {
     } | {
         family: 'ACCOUNT', 
         code: 'CAPTCHA_IS_ERROR'
+    } | {
+        family: 'ACCOUNT', 
+        code: 'SMS_SEND_TOO_FREQUENT'
+    } | {
+        family: 'ACCOUNT', 
+        code: 'SMS_CODE_EXPIRED'
+    } | {
+        family: 'ACCOUNT', 
+        code: 'SMS_CODE_IS_ERROR'
     };
 export type ApiErrors = {
     'accountService': {
@@ -30,6 +42,10 @@ export type ApiErrors = {
                 readonly [key:string]: any
             } | {
                 family: 'ACCOUNT', 
+                code: 'PHONE_DOES_NOT_EXIST', 
+                readonly [key:string]: any
+            } | {
+                family: 'ACCOUNT', 
                 code: 'UNAUTHORIZED', 
                 readonly [key:string]: any
             } | {
@@ -39,6 +55,18 @@ export type ApiErrors = {
             } | {
                 family: 'ACCOUNT', 
                 code: 'CAPTCHA_IS_ERROR', 
+                readonly [key:string]: any
+            } | {
+                family: 'ACCOUNT', 
+                code: 'SMS_SEND_TOO_FREQUENT', 
+                readonly [key:string]: any
+            } | {
+                family: 'ACCOUNT', 
+                code: 'SMS_CODE_EXPIRED', 
+                readonly [key:string]: any
+            } | {
+                family: 'ACCOUNT', 
+                code: 'SMS_CODE_IS_ERROR', 
                 readonly [key:string]: any
             })
     }, 

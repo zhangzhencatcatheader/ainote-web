@@ -1,18 +1,47 @@
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Form as TForm, FormItem as TFormItem, Input as TInput, Button as TButton } from 'tdesign-vue-next'
 import { UserIcon, LockOnIcon, CallIcon } from 'tdesign-icons-vue-next'
 import type { FormInstanceFunctions, FormProps } from 'tdesign-vue-next'
 import { api } from '@/utils/api'
 import { showSuccess, showError, showLoading, hideLoading } from '@/utils/message'
-import type { LoginInput, RegisterInput } from '@/api/model/static'
+import type { LoginInput, RegisterInput, SmsLoginInput } from '@/api/model/static'
+import { setAuthInfo } from '@/utils/tenant'
 
 type LoginFormModel = {
   username: LoginInput['username']
   password: LoginInput['password']
   verCode: LoginInput['verCode']
   verKey: LoginInput['verKey']
+}
+
+const handleSmsLogin = async () => {
+  showLoading('登录中...')
+
+  try {
+    const response = await api.authService.smsLogin({
+      body: {
+        phone: smsLoginForm.phone,
+        code: smsLoginForm.code,
+        scene: SMS_SCENE,
+      },
+    })
+
+    if (!response || !response.token) {
+      throw new Error('登录响应格式错误')
+    }
+
+    setAuthInfo(response)
+
+    showSuccess('登录成功')
+    await router.push('/')
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '登录失败'
+    showError(errorMessage)
+  } finally {
+    hideLoading()
+  }
 }
 
 type RegisterFormModel = {
@@ -26,8 +55,10 @@ type RegisterFormModel = {
 
 const router = useRouter()
 const mode = ref<'login' | 'register'>('login')
+const loginType = ref<'password' | 'sms'>('password')
 const loginFormRef = ref<FormInstanceFunctions>()
 const registerFormRef = ref<FormInstanceFunctions>()
+const smsLoginFormRef = ref<FormInstanceFunctions>()
 
 const loginForm = reactive<LoginFormModel>({
   username: '',
@@ -44,6 +75,21 @@ const registerForm = reactive<RegisterFormModel>({
   verCode: '',
   verKey: '',
 })
+
+type SmsLoginFormModel = {
+  phone: SmsLoginInput['phone']
+  code: SmsLoginInput['code']
+}
+
+const SMS_SCENE: SmsLoginInput['scene'] = 'LOGIN'
+
+const smsLoginForm = reactive<SmsLoginFormModel>({
+  phone: '',
+  code: '',
+})
+
+const smsCountdown = ref(0)
+let smsTimer: number | undefined
 
 const captchaImageRaw = ref('')
 
@@ -79,6 +125,18 @@ const loginRules: FormProps['rules'] = {
   verCode: [{ required: true, message: '请输入验证码' }],
 }
 
+const smsLoginRules: FormProps['rules'] = {
+  phone: [
+    { required: true, message: '请输入手机号' },
+    {
+      validator: (val: string) => /^1\d{10}$/.test(val),
+      message: '请输入有效手机号',
+      trigger: 'blur',
+    },
+  ],
+  code: [{ required: true, message: '请输入短信验证码' }],
+}
+
 const registerRules: FormProps['rules'] = {
   username: [{ required: true, message: '请输入用户名' }],
   phone: [
@@ -108,6 +166,8 @@ const resetForms = () => {
   loginForm.password = ''
   loginForm.verCode = ''
   loginForm.verKey = ''
+  smsLoginForm.phone = ''
+  smsLoginForm.code = ''
   registerForm.username = ''
   registerForm.phone = ''
   registerForm.password = ''
@@ -115,6 +175,7 @@ const resetForms = () => {
   registerForm.verCode = ''
   registerForm.verKey = ''
   loginFormRef.value?.reset()
+  smsLoginFormRef.value?.reset()
   registerFormRef.value?.reset()
   refreshCaptcha()
 }
@@ -122,6 +183,51 @@ const resetForms = () => {
 const toggleMode = () => {
   mode.value = mode.value === 'login' ? 'register' : 'login'
   resetForms()
+}
+
+const setCountdown = (seconds: number) => {
+  smsCountdown.value = seconds
+  if (smsTimer) {
+    window.clearInterval(smsTimer)
+    smsTimer = undefined
+  }
+  if (seconds <= 0) return
+  smsTimer = window.setInterval(() => {
+    smsCountdown.value -= 1
+    if (smsCountdown.value <= 0 && smsTimer) {
+      window.clearInterval(smsTimer)
+      smsTimer = undefined
+    }
+  }, 1000)
+}
+
+const handleSendSms = async () => {
+  const validate = await smsLoginFormRef.value?.validate?.()
+  if (validate !== true) {
+    showError('请先输入正确的手机号')
+    return
+  }
+
+  if (smsCountdown.value > 0) {
+    return
+  }
+
+  showLoading('发送中...')
+  try {
+    await api.authService.sendSms({
+      body: {
+        phone: smsLoginForm.phone,
+        scene: SMS_SCENE,
+      },
+    })
+    showSuccess('验证码已发送')
+    setCountdown(60)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '发送失败'
+    showError(errorMessage)
+  } finally {
+    hideLoading()
+  }
 }
 
 const handleLogin = async () => {
@@ -136,12 +242,7 @@ const handleLogin = async () => {
       throw new Error('登录响应格式错误')
     }
 
-    localStorage.setItem('auth_token', response.token)
-    localStorage.setItem('user_id', response.id || '')
-    localStorage.setItem('user_role', response.role || 'user')
-    if (response.tenant) {
-      localStorage.setItem('auth_tenant', response.tenant)
-    }
+    setAuthInfo(response)
 
     showSuccess('登录成功')
     await router.push('/')
@@ -166,12 +267,7 @@ const handleRegister = async () => {
       throw new Error('注册响应格式错误')
     }
 
-    localStorage.setItem('auth_token', response.token)
-    localStorage.setItem('user_id', response.id || '')
-    localStorage.setItem('user_role', response.role || 'user')
-    if (response.tenant) {
-      localStorage.setItem('auth_tenant', response.tenant)
-    }
+    setAuthInfo(response)
 
     showSuccess('注册成功')
     await router.push('/')
@@ -191,6 +287,14 @@ const onLoginSubmit: FormProps['onSubmit'] = async ({ validateResult, firstError
   }
 }
 
+const onSmsLoginSubmit: FormProps['onSubmit'] = async ({ validateResult, firstError }) => {
+  if (validateResult === true) {
+    await handleSmsLogin()
+  } else {
+    showError(firstError || '请完善登录信息')
+  }
+}
+
 const onRegisterSubmit: FormProps['onSubmit'] = async ({ validateResult, firstError }) => {
   if (validateResult === true) {
     await handleRegister()
@@ -201,6 +305,13 @@ const onRegisterSubmit: FormProps['onSubmit'] = async ({ validateResult, firstEr
 
 onMounted(() => {
   refreshCaptcha()
+})
+
+onUnmounted(() => {
+  if (smsTimer) {
+    window.clearInterval(smsTimer)
+    smsTimer = undefined
+  }
 })
 </script>
 
@@ -213,8 +324,13 @@ onMounted(() => {
       </div>
 
       <div class="form-wrapper">
+        <div v-if="mode === 'login'" class="login-type-switch">
+          <TButton variant="text" :theme="loginType === 'password' ? 'primary' : 'default'" @click="loginType = 'password'">密码登录</TButton>
+          <TButton variant="text" :theme="loginType === 'sms' ? 'primary' : 'default'" @click="loginType = 'sms'">短信登录</TButton>
+        </div>
+
         <TForm
-          v-if="mode === 'login'"
+          v-if="mode === 'login' && loginType === 'password'"
           ref="loginFormRef"
           :data="loginForm"
           :rules="loginRules"
@@ -247,6 +363,38 @@ onMounted(() => {
                 </template>
               </TInput>
               <img v-if="captchaImageSrc" class="captcha-image" :src="captchaImageSrc" alt="captcha" @click="refreshCaptcha" />
+            </div>
+          </TFormItem>
+
+          <TFormItem>
+            <TButton class="submit-button" theme="primary" type="submit" size="large" block>登录</TButton>
+          </TFormItem>
+        </TForm>
+
+        <TForm
+          v-else-if="mode === 'login' && loginType === 'sms'"
+          ref="smsLoginFormRef"
+          :data="smsLoginForm"
+          :rules="smsLoginRules"
+          colon
+          :label-width="0"
+          :show-error-message="true"
+          @submit="onSmsLoginSubmit"
+        >
+          <TFormItem name="phone">
+            <TInput v-model="smsLoginForm.phone" size="large" type="tel" clearable placeholder="请输入手机号">
+              <template #prefix-icon>
+                <CallIcon />
+              </template>
+            </TInput>
+          </TFormItem>
+
+          <TFormItem name="code">
+            <div class="sms-row">
+              <TInput v-model="smsLoginForm.code" size="large" clearable placeholder="请输入短信验证码" />
+              <TButton class="sms-button" variant="outline" :disabled="smsCountdown > 0" @click="handleSendSms">
+                {{ smsCountdown > 0 ? `${smsCountdown}s` : '发送验证码' }}
+              </TButton>
             </div>
           </TFormItem>
 
@@ -392,6 +540,18 @@ onMounted(() => {
   width: 100%;
 }
 
+.sms-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.sms-button {
+  width: 110px;
+  height: 40px;
+}
+
 .captcha-image {
   width: 110px;
   height: 40px;
@@ -410,6 +570,13 @@ onMounted(() => {
   width: 360px;
   max-width: 100%;
   margin: 0 auto;
+}
+
+.login-type-switch {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  gap: 8px;
 }
 
 .submit-button {
