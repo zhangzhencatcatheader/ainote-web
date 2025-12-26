@@ -4,7 +4,7 @@ export type AccountDto = {
     'AccountService/SIMPLE_ACCOUNT': {
         readonly id: string;
         readonly username: string;
-        readonly phone?: string | undefined;
+        readonly phone: string;
         readonly role: RoleEnum;
         readonly status: UserStatus;
         readonly avatar?: {

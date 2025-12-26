@@ -1,6 +1,11 @@
 import type {Executor} from '../';
-import type {CompanyDto} from '../model/dto/';
-import type {CompanyAddInput, CompanySearch, Page} from '../model/static/';
+import type {AccountCompanyEntityDto, CompanyDto} from '../model/dto/';
+import type {
+    CompanyAddInput, 
+    CompanySearch, 
+    CompanyService_ChangeCompanyRole, 
+    Page
+} from '../model/static/';
 
 export class CompanyService {
     
@@ -84,6 +89,23 @@ export class CompanyService {
     }
     
     /**
+     * 获取该企业下所有人员
+     */
+    readonly getCompanyMembers: (options: CompanyServiceOptions['getCompanyMembers']) => Promise<
+        ReadonlyArray<AccountCompanyEntityDto['CompanyService/COMPANY_MEMBER']>
+    > = async(options) => {
+        let _uri = '/company/members';
+        let _separator = _uri.indexOf('?') === -1 ? '?' : '&';
+        let _value: any = undefined;
+        _value = options.companyId;
+        _uri += _separator
+        _uri += 'companyId='
+        _uri += encodeURIComponent(_value);
+        _separator = '&';
+        return (await this.executor({uri: _uri, method: 'GET'})) as Promise<ReadonlyArray<AccountCompanyEntityDto['CompanyService/COMPANY_MEMBER']>>;
+    }
+    
+    /**
      * 查询我加入的企业
      */
     readonly myCompany: () => Promise<
@@ -146,6 +168,13 @@ export class CompanyService {
         }
         return (await this.executor({uri: _uri, method: 'GET'})) as Promise<Page<CompanyDto['CompanyService/LIST_COMPANY']>>;
     }
+    
+    readonly setAdmin: (options: CompanyServiceOptions['setAdmin']) => Promise<
+        string
+    > = async(options) => {
+        let _uri = '/company/setAdmin';
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<string>;
+    }
 }
 
 export type CompanyServiceOptions = {
@@ -162,5 +191,11 @@ export type CompanyServiceOptions = {
         readonly id: string
     }, 
     'myCompany': {}, 
-    'allCompanyNames': {}
+    'allCompanyNames': {}, 
+    'setAdmin': {
+        readonly body: CompanyService_ChangeCompanyRole
+    }, 
+    'getCompanyMembers': {
+        readonly companyId: string
+    }
 }

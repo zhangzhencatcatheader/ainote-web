@@ -1,3 +1,5 @@
+import type {RoleEnum} from '../enums/';
+
 export type CompanyDto = {
     'CompanyService/COMPANY_NAME': {
         readonly id: string;
@@ -10,5 +12,13 @@ export type CompanyDto = {
         readonly address?: string | undefined;
         readonly tenant: string;
         readonly contact?: string | undefined;
+        readonly accountCompanies: ReadonlyArray<{
+            readonly id: string;
+            readonly account: {
+                readonly id: string;
+                readonly username: string;
+            };
+            readonly role: RoleEnum;
+        }>;
     }
 }

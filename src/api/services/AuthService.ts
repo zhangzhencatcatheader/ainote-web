@@ -2,11 +2,13 @@ import type {Executor} from '../';
 import type {
     AuthResponse, 
     AuthService_CaptchaResponse, 
+    AuthService_VerifyCaptchaResponse, 
     LoginInput, 
     RegisterInput, 
     SendSmsCodeInput, 
     SmsLoginInput, 
-    SmsVerifyCodeService_SmsSendResult
+    SmsVerifyCodeService_SmsSendResult, 
+    VerifyCaptchaInput
 } from '../model/static/';
 
 /**
@@ -63,6 +65,13 @@ export class AuthService {
         let _uri = '/auth/sms/login';
         return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<AuthResponse>;
     }
+    
+    readonly verifyCaptcha: (options: AuthServiceOptions['verifyCaptcha']) => Promise<
+        AuthService_VerifyCaptchaResponse
+    > = async(options) => {
+        let _uri = '/auth/captcha/verify';
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<AuthService_VerifyCaptchaResponse>;
+    }
 }
 
 export type AuthServiceOptions = {
@@ -84,5 +93,8 @@ export type AuthServiceOptions = {
     'smsLogin': {
         readonly body: SmsLoginInput
     }, 
-    'captcha': {}
+    'captcha': {}, 
+    'verifyCaptcha': {
+        readonly body: VerifyCaptchaInput
+    }
 }

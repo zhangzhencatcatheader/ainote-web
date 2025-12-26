@@ -4,10 +4,12 @@ export type {AiChatRequest} from './AiChatRequest';
 export type {AiChatResponse} from './AiChatResponse';
 export type {AuthResponse} from './AuthResponse';
 export type {AuthService_CaptchaResponse} from './AuthService_CaptchaResponse';
+export type {AuthService_VerifyCaptchaResponse} from './AuthService_VerifyCaptchaResponse';
 export type {ChangeAccountStatusInput} from './ChangeAccountStatusInput';
 export type {ChangeTemplateStatus} from './ChangeTemplateStatus';
 export type {CompanyAddInput} from './CompanyAddInput';
 export type {CompanySearch} from './CompanySearch';
+export type {CompanyService_ChangeCompanyRole} from './CompanyService_ChangeCompanyRole';
 export type {CreateNote} from './CreateNote';
 export type {CreateTemplate} from './CreateTemplate';
 export type {CreateTemplateField} from './CreateTemplateField';
@@ -27,3 +29,4 @@ export type {SmsVerifyCodeService_SmsSendResult} from './SmsVerifyCodeService_Sm
 export type {UpdateInput} from './UpdateInput';
 export type {UpdateTemplate} from './UpdateTemplate';
 export type {UpdateTemplate_TargetOf_fields} from './UpdateTemplate_TargetOf_fields';
+export type {VerifyCaptchaInput} from './VerifyCaptchaInput';

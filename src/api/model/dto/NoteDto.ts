@@ -95,7 +95,7 @@ export type NoteDto = {
             readonly username: string;
             readonly password: string;
             readonly email?: string | undefined;
-            readonly phone?: string | undefined;
+            readonly phone: string;
             readonly status: UserStatus;
             readonly role: RoleEnum;
         }>;

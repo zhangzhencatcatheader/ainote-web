@@ -8,6 +8,7 @@ import { api } from '@/utils/api'
 import { showSuccess, showError, showLoading, hideLoading } from '@/utils/message'
 import type { LoginInput, RegisterInput, SmsLoginInput } from '@/api/model/static'
 import { setAuthInfo } from '@/utils/tenant'
+import CaptchaVerify from '@/components/CaptchaVerify.vue'
 
 type LoginFormModel = {
   username: LoginInput['username']
@@ -24,7 +25,7 @@ const handleSmsLogin = async () => {
       body: {
         phone: smsLoginForm.phone,
         code: smsLoginForm.code,
-        scene: SMS_SCENE,
+        scene: SMS_LOGIN_SCENE,
       },
     })
 
@@ -46,11 +47,10 @@ const handleSmsLogin = async () => {
 
 type RegisterFormModel = {
   username: RegisterInput['username']
-  phone?: RegisterInput['phone']
+  phone: RegisterInput['phone']
+  code: RegisterInput['code']
   password: RegisterInput['password']
   confirmPassword: string
-  verCode: RegisterInput['verCode']
-  verKey: RegisterInput['verKey']
 }
 
 const router = useRouter()
@@ -59,6 +59,10 @@ const loginType = ref<'password' | 'sms'>('password')
 const loginFormRef = ref<FormInstanceFunctions>()
 const registerFormRef = ref<FormInstanceFunctions>()
 const smsLoginFormRef = ref<FormInstanceFunctions>()
+
+const showCaptchaDialog = ref(false)
+const captchaPhone = ref('')
+const captchaScene = ref<'LOGIN' | 'REGISTER'>('LOGIN')
 
 const loginForm = reactive<LoginFormModel>({
   username: '',
@@ -70,10 +74,9 @@ const loginForm = reactive<LoginFormModel>({
 const registerForm = reactive<RegisterFormModel>({
   username: '',
   phone: '',
+  code: '',
   password: '',
   confirmPassword: '',
-  verCode: '',
-  verKey: '',
 })
 
 type SmsLoginFormModel = {
@@ -81,7 +84,8 @@ type SmsLoginFormModel = {
   code: SmsLoginInput['code']
 }
 
-const SMS_SCENE: SmsLoginInput['scene'] = 'LOGIN'
+const SMS_LOGIN_SCENE: SmsLoginInput['scene'] = 'LOGIN'
+const SMS_REGISTER_SCENE: RegisterInput['scene'] = 'REGISTER'
 
 const smsLoginForm = reactive<SmsLoginFormModel>({
   phone: '',
@@ -89,7 +93,9 @@ const smsLoginForm = reactive<SmsLoginFormModel>({
 })
 
 const smsCountdown = ref(0)
+const registerSmsCountdown = ref(0)
 let smsTimer: number | undefined
+let registerSmsTimer: number | undefined
 
 const captchaImageRaw = ref('')
 
@@ -108,11 +114,8 @@ const refreshCaptcha = async () => {
   try {
     const resp = await api.authService.captcha()
     loginForm.verKey = resp.key || ''
-    registerForm.verKey = resp.key || ''
     captchaImageRaw.value = resp.image || ''
-
     loginForm.verCode = ''
-    registerForm.verCode = ''
   } catch (e) {
     console.error('获取验证码失败', e)
     showError('获取验证码失败，请稍后重试')
@@ -140,12 +143,14 @@ const smsLoginRules: FormProps['rules'] = {
 const registerRules: FormProps['rules'] = {
   username: [{ required: true, message: '请输入用户名' }],
   phone: [
+    { required: true, message: '请输入手机号' },
     {
-      validator: (val: string) => !val || /^1\d{10}$/.test(val),
+      validator: (val: string) => /^1\d{10}$/.test(val),
       message: '请输入有效手机号',
       trigger: 'blur',
     },
   ],
+  code: [{ required: true, message: '请输入短信验证码' }],
   password: [
     { required: true, message: '请输入密码' },
     { min: 6, message: '密码至少6位' },
@@ -158,7 +163,6 @@ const registerRules: FormProps['rules'] = {
       trigger: 'blur',
     },
   ],
-  verCode: [{ required: true, message: '请输入验证码' }],
 }
 
 const resetForms = () => {
@@ -170,14 +174,12 @@ const resetForms = () => {
   smsLoginForm.code = ''
   registerForm.username = ''
   registerForm.phone = ''
+  registerForm.code = ''
   registerForm.password = ''
   registerForm.confirmPassword = ''
-  registerForm.verCode = ''
-  registerForm.verKey = ''
   loginFormRef.value?.reset()
   smsLoginFormRef.value?.reset()
   registerFormRef.value?.reset()
-  refreshCaptcha()
 }
 
 const toggleMode = () => {
@@ -201,7 +203,23 @@ const setCountdown = (seconds: number) => {
   }, 1000)
 }
 
-const handleSendSms = async () => {
+const setRegisterCountdown = (seconds: number) => {
+  registerSmsCountdown.value = seconds
+  if (registerSmsTimer) {
+    window.clearInterval(registerSmsTimer)
+    registerSmsTimer = undefined
+  }
+  if (seconds <= 0) return
+  registerSmsTimer = window.setInterval(() => {
+    registerSmsCountdown.value -= 1
+    if (registerSmsCountdown.value <= 0 && registerSmsTimer) {
+      window.clearInterval(registerSmsTimer)
+      registerSmsTimer = undefined
+    }
+  }, 1000)
+}
+
+const handleSendSms = () => {
   const phone = (smsLoginForm.phone || '').trim()
   if (!/^1\d{10}$/.test(phone)) {
     showError('请先输入正确的手机号')
@@ -212,22 +230,25 @@ const handleSendSms = async () => {
     return
   }
 
-  showLoading('发送中...')
-  try {
-    await api.authService.sendSms({
-      body: {
-        phone,
-        scene: SMS_SCENE,
-      },
-    })
-    showSuccess('验证码已发送')
-    setCountdown(60)
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '发送失败'
-    showError(errorMessage)
-  } finally {
-    hideLoading()
+  captchaPhone.value = phone
+  captchaScene.value = 'LOGIN'
+  showCaptchaDialog.value = true
+}
+
+const handleSendRegisterSms = () => {
+  const phone = (registerForm.phone || '').trim()
+  if (!/^1\d{10}$/.test(phone)) {
+    showError('请先输入正确的手机号')
+    return
   }
+
+  if (registerSmsCountdown.value > 0) {
+    return
+  }
+
+  captchaPhone.value = phone
+  captchaScene.value = 'REGISTER'
+  showCaptchaDialog.value = true
 }
 
 const handleLogin = async () => {
@@ -258,9 +279,9 @@ const handleRegister = async () => {
   showLoading('注册中...')
 
   try {
-    const { username, phone, password, verCode, verKey } = registerForm
+    const { username, phone, code, password } = registerForm
     const response = await api.authService.register({
-      body: { username, phone, password, verCode, verKey },
+      body: { username, phone, code, password, scene: SMS_REGISTER_SCENE },
     })
 
     if (!response || !response.token) {
@@ -303,6 +324,29 @@ const onRegisterSubmit: FormProps['onSubmit'] = async ({ validateResult, firstEr
   }
 }
 
+const handleCaptchaSuccess = async () => {
+  showLoading('发送中...')
+  try {
+    await api.authService.sendSms({
+      body: {
+        phone: captchaPhone.value,
+        scene: captchaScene.value,
+      },
+    })
+    showSuccess('验证码已发送')
+    if (captchaScene.value === 'LOGIN') {
+      setCountdown(60)
+    } else {
+      setRegisterCountdown(60)
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '发送失败'
+    showError(errorMessage)
+  } finally {
+    hideLoading()
+  }
+}
+
 onMounted(() => {
   refreshCaptcha()
 })
@@ -311,6 +355,10 @@ onUnmounted(() => {
   if (smsTimer) {
     window.clearInterval(smsTimer)
     smsTimer = undefined
+  }
+  if (registerSmsTimer) {
+    window.clearInterval(registerSmsTimer)
+    registerSmsTimer = undefined
   }
 })
 </script>
@@ -422,21 +470,19 @@ onUnmounted(() => {
           </TFormItem>
 
           <TFormItem name="phone">
-            <TInput v-model="registerForm.phone" size="large" type="tel" clearable placeholder="请输入手机号（可选）">
+            <TInput v-model="registerForm.phone" size="large" type="tel" clearable placeholder="请输入手机号">
               <template #prefix-icon>
                 <CallIcon />
               </template>
             </TInput>
           </TFormItem>
 
-          <TFormItem name="verCode">
-            <div class="captcha-row">
-              <TInput v-model="registerForm.verCode" size="large" clearable placeholder="请输入验证码">
-                <template #prefix-icon>
-                  <CallIcon />
-                </template>
-              </TInput>
-              <img v-if="captchaImageSrc" class="captcha-image" :src="captchaImageSrc" alt="captcha" @click="refreshCaptcha" />
+          <TFormItem name="code">
+            <div class="sms-row">
+              <TInput v-model="registerForm.code" size="large" clearable placeholder="请输入短信验证码" />
+              <TButton class="sms-button" variant="outline" :disabled="registerSmsCountdown > 0" @click="handleSendRegisterSms">
+                {{ registerSmsCountdown > 0 ? `${registerSmsCountdown}s` : '发送验证码' }}
+              </TButton>
             </div>
           </TFormItem>
 
@@ -481,6 +527,13 @@ onUnmounted(() => {
         </a>
       </div>
     </div>
+
+    <CaptchaVerify
+      v-model:visible="showCaptchaDialog"
+      :phone="captchaPhone"
+      :scene="captchaScene"
+      @success="handleCaptchaSuccess"
+    />
   </div>
 </template>
 

@@ -25,6 +25,9 @@ export type AllErrors = {
     } | {
         family: 'ACCOUNT', 
         code: 'SMS_CODE_IS_ERROR'
+    } | {
+        family: 'ACCOUNT', 
+        code: 'USER_IS_THIS_COMPANY_ADMIN'
     };
 export type ApiErrors = {
     'accountService': {
@@ -67,6 +70,10 @@ export type ApiErrors = {
             } | {
                 family: 'ACCOUNT', 
                 code: 'SMS_CODE_IS_ERROR', 
+                readonly [key:string]: any
+            } | {
+                family: 'ACCOUNT', 
+                code: 'USER_IS_THIS_COMPANY_ADMIN', 
                 readonly [key:string]: any
             })
     }, 

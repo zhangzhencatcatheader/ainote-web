@@ -22,7 +22,7 @@ export interface Dynamic_Account {
     readonly username?: string;
     readonly password?: string;
     readonly email?: string | undefined;
-    readonly phone?: string | undefined;
+    readonly phone?: string;
     readonly status?: UserStatus;
     readonly role?: RoleEnum;
     readonly avatar?: Dynamic_StaticFile | undefined;

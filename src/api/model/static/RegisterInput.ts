@@ -1,7 +1,7 @@
 export interface RegisterInput {
     readonly username: string;
-    readonly phone?: string | undefined;
+    readonly phone: string;
     readonly password: string;
-    readonly verCode: string;
-    readonly verKey: string;
+    readonly code: string;
+    readonly scene: string;
 }
