@@ -28,6 +28,9 @@ export type AllErrors = {
     } | {
         family: 'ACCOUNT', 
         code: 'USER_IS_THIS_COMPANY_ADMIN'
+    } | {
+        family: 'ACCOUNT', 
+        code: 'NOT_IN_COMPANY'
     };
 export type ApiErrors = {
     'accountService': {
@@ -74,6 +77,10 @@ export type ApiErrors = {
             } | {
                 family: 'ACCOUNT', 
                 code: 'USER_IS_THIS_COMPANY_ADMIN', 
+                readonly [key:string]: any
+            } | {
+                family: 'ACCOUNT', 
+                code: 'NOT_IN_COMPANY', 
                 readonly [key:string]: any
             })
     }, 

@@ -3,6 +3,10 @@ import type {AccountDto} from '../model/dto/';
 import type {Dynamic_Account} from '../model/dynamic/';
 import type {
     AccountSearch, 
+    AccountService_ChangePasswordInput, 
+    AccountService_ResetPasswordInput, 
+    AccountService_SwitchCompanyInput, 
+    AuthResponse, 
     ChangeAccountStatusInput, 
     JoinCompany, 
     KSimpleSaveResult, 
@@ -17,6 +21,13 @@ import type {
 export class AccountService {
     
     constructor(private executor: Executor) {}
+    
+    readonly changePassword: (options: AccountServiceOptions['changePassword']) => Promise<
+        {readonly [key:string]: string}
+    > = async(options) => {
+        let _uri = '/account/change-password';
+        return (await this.executor({uri: _uri, method: 'PUT', body: options.body})) as Promise<{readonly [key:string]: string}>;
+    }
     
     /**
      * 修改用户状态
@@ -99,6 +110,23 @@ export class AccountService {
         return (await this.executor({uri: _uri, method: 'GET'})) as Promise<Page<AccountDto['AccountService/SIMPLE_ACCOUNT']>>;
     }
     
+    readonly resetPassword: (options: AccountServiceOptions['resetPassword']) => Promise<
+        {readonly [key:string]: string}
+    > = async(options) => {
+        let _uri = '/account/reset-password';
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<{readonly [key:string]: string}>;
+    }
+    
+    /**
+     * 切换企业
+     */
+    readonly switchCompany: (options: AccountServiceOptions['switchCompany']) => Promise<
+        AuthResponse
+    > = async(options) => {
+        let _uri = '/account/switch-company';
+        return (await this.executor({uri: _uri, method: 'POST', body: options.body})) as Promise<AuthResponse>;
+    }
+    
     /**
      * 修改个人信息
      */
@@ -126,5 +154,14 @@ export type AccountServiceOptions = {
     }, 
     'changeStatus': {
         readonly body: ChangeAccountStatusInput
+    }, 
+    'changePassword': {
+        readonly body: AccountService_ChangePasswordInput
+    }, 
+    'resetPassword': {
+        readonly body: AccountService_ResetPasswordInput
+    }, 
+    'switchCompany': {
+        readonly body: AccountService_SwitchCompanyInput
     }
 }

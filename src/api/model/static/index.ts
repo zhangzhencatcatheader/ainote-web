@@ -1,4 +1,7 @@
 export type {AccountSearch} from './AccountSearch';
+export type {AccountService_ChangePasswordInput} from './AccountService_ChangePasswordInput';
+export type {AccountService_ResetPasswordInput} from './AccountService_ResetPasswordInput';
+export type {AccountService_SwitchCompanyInput} from './AccountService_SwitchCompanyInput';
 export type {AffectedTable} from './AffectedTable';
 export type {AiChatRequest} from './AiChatRequest';
 export type {AiChatResponse} from './AiChatResponse';

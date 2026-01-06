@@ -29,6 +29,7 @@ const routeMetaByPath = computed(() => {
 const companyName = ref<string>('')
 const companyRole = ref<string>('')
 const needJoinCompany = ref(false)
+const userCompanies = ref<Array<{ id: string; name: string; choiceFlag: boolean }>>([])
 
 type CompanyNameRow = {
   id: string
@@ -39,6 +40,10 @@ const joinDialogVisible = ref(false)
 const joinLoading = ref(false)
 const joinSelectedCompanyId = ref('')
 const companyOptions = ref<CompanyNameRow[]>([])
+
+const switchDialogVisible = ref(false)
+const switchLoading = ref(false)
+const switchSelectedCompanyId = ref('')
 
 const filteredCompanyOptions = computed(() => {
   return companyOptions.value
@@ -118,10 +123,16 @@ const loadCompanyState = async () => {
       companyName.value = ''
       companyRole.value = ''
       needJoinCompany.value = true
+      userCompanies.value = []
       return
     }
 
     needJoinCompany.value = false
+    userCompanies.value = companies.map((c) => ({
+      id: c.company?.id || '',
+      name: c.company?.name || '',
+      choiceFlag: c.choiceFlag || false,
+    }))
 
     const active = companies.find((c) => c.choiceFlag) || companies[0]
     companyName.value = active?.company?.name || ''
@@ -171,6 +182,52 @@ const shortcuts = ref([
   { title: '常用标签', items: ['#工作', '#灵感', '#技术'] },
 ])
 
+const openSwitchDialog = () => {
+  switchDialogVisible.value = true
+  const current = userCompanies.value.find((c) => c.choiceFlag)
+  switchSelectedCompanyId.value = current?.id || ''
+}
+
+const handleSwitchCompany = async () => {
+  if (!switchSelectedCompanyId.value) {
+    showError('请选择企业')
+    return
+  }
+
+  const current = userCompanies.value.find((c) => c.choiceFlag)
+  if (current?.id === switchSelectedCompanyId.value) {
+    switchDialogVisible.value = false
+    return
+  }
+
+  switchLoading.value = true
+  try {
+    const response = await api.accountService.switchCompany({
+      body: {
+        companyId: switchSelectedCompanyId.value,
+      },
+    })
+
+    if (response && response.token) {
+      localStorage.setItem('auth_token', response.token)
+      if (response.tenant) {
+        localStorage.setItem('auth_tenant', response.tenant)
+      }
+    }
+
+    MessagePlugin.success('切换成功')
+    await loadCompanyState()
+    switchDialogVisible.value = false
+    window.location.reload()
+  } catch (e) {
+    console.error('切换企业失败', e)
+    const msg = e instanceof Error ? e.message : '切换企业失败'
+    showError(msg)
+  } finally {
+    switchLoading.value = false
+  }
+}
+
 const navigateTo = (path: string) => {
   if (!isLoggedIn.value && path !== '/auth') {
     showConfirm({
@@ -214,6 +271,22 @@ onMounted(() => {
         </Form>
       </Dialog>
 
+      <Dialog
+        v-model:visible="switchDialogVisible"
+        header="切换企业"
+        confirm-btn="切换"
+        :confirm-loading="switchLoading"
+        @confirm="handleSwitchCompany"
+      >
+        <Form colon :label-width="80">
+          <FormItem label="选择企业">
+            <Select v-model="switchSelectedCompanyId" filterable placeholder="请选择企业">
+              <Option v-for="c in userCompanies" :key="c.id" :value="c.id" :label="c.name" />
+            </Select>
+          </FormItem>
+        </Form>
+      </Dialog>
+
       <Row :gutter="[16, 16]">
         <Col :span="9">
           <Card bordered hover-shadow>
@@ -243,10 +316,19 @@ onMounted(() => {
               </div>
               <div class="status-item">
                 <span class="status-icon">🏢</span>
-                <div>
+                <div style="flex: 1">
                   <div class="status-label">企业</div>
                   <div class="status-value">{{ companyName || (isLoggedIn ? '未加入' : '-') }}</div>
                 </div>
+                <Button 
+                  v-if="!needJoinCompany && companyName && userCompanies.length > 0" 
+                  theme="default" 
+                  size="small" 
+                  variant="outline"
+                  @click="openSwitchDialog"
+                >
+                  切换
+                </Button>
               </div>
               <div v-if="needJoinCompany" class="status-item">
                 <span class="status-icon">➕</span>

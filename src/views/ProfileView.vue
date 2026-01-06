@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Card,
@@ -10,8 +10,9 @@ import {
   Space,
   Avatar,
   Upload,
+  Dialog,
 } from 'tdesign-vue-next'
-import type { UploadFile, RequestMethodResponse, SuccessContext } from 'tdesign-vue-next'
+import type { UploadFile, RequestMethodResponse, SuccessContext, FormProps } from 'tdesign-vue-next'
 import WebLayout from '@/components/WebLayout.vue'
 import { api } from '@/utils/api'
 import { showError, showSuccess } from '@/utils/message'
@@ -27,8 +28,38 @@ const uploadLoading = ref(false)
 const formData = ref<UpdateInput>({
   username: '',
   phone: '',
-  accountCompanies: [],
 })
+
+const showPasswordDialog = ref(false)
+const passwordLoading = ref(false)
+
+type PasswordFormData = {
+  oldPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+const passwordForm = reactive<PasswordFormData>({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
+const passwordRules: FormProps['rules'] = {
+  oldPassword: [{ required: true, message: '请输入当前密码' }],
+  newPassword: [
+    { required: true, message: '请输入新密码' },
+    { min: 6, message: '密码至少6位' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码' },
+    {
+      validator: (val: string) => val === passwordForm.newPassword,
+      message: '两次输入的密码不一致',
+      trigger: 'blur',
+    },
+  ],
+}
 
 const avatarUrl = ref<string>('')
 const avatarFileId = ref<string>('')
@@ -52,10 +83,6 @@ const fetchUserInfo = async (force = false) => {
       id: data.id,
       username: data.username,
       phone: data.phone || '',
-      accountCompanies: data.accountCompanies.map((ac) => ({
-        companyId: ac.company.id,
-        role: ac.role,
-      })),
     }
 
     avatarFileId.value = data.avatar?.id || ''
@@ -130,7 +157,6 @@ const handleSave = async () => {
         username: formData.value.username,
         phone: formData.value.phone || undefined,
         avatarId: avatarFileId.value || undefined,
-        accountCompanies: formData.value.accountCompanies,
       },
     })
     showSuccess('保存成功')
@@ -149,6 +175,50 @@ const handleSave = async () => {
 // 取消
 const handleCancel = () => {
   router.back()
+}
+
+const handleOpenPasswordDialog = () => {
+  passwordForm.oldPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  showPasswordDialog.value = true
+}
+
+const handleChangePassword = async () => {
+  if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+    showError('请填写完整的密码信息')
+    return
+  }
+
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    showError('两次输入的密码不一致')
+    return
+  }
+
+  if (passwordForm.newPassword.length < 6) {
+    showError('密码至少6位')
+    return
+  }
+
+  passwordLoading.value = true
+  try {
+    await api.accountService.changePassword({
+      body: {
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword,
+      },
+    })
+    showSuccess('密码修改成功')
+    showPasswordDialog.value = false
+    passwordForm.oldPassword = ''
+    passwordForm.newPassword = ''
+    passwordForm.confirmPassword = ''
+  } catch (error) {
+    console.error('修改密码失败', error)
+    showError(error instanceof Error ? error.message : '修改密码失败，请稍后重试')
+  } finally {
+    passwordLoading.value = false
+  }
 }
 
 onMounted(() => {
@@ -192,6 +262,10 @@ onMounted(() => {
             <Input v-model="formData.phone" placeholder="请输入手机号" clearable />
           </FormItem>
 
+          <FormItem label="密码">
+            <Button theme="default" variant="outline" @click="handleOpenPasswordDialog">修改密码</Button>
+          </FormItem>
+
           <FormItem>
             <Space>
               <Button theme="primary" :loading="loading" @click="handleSave">保存</Button>
@@ -201,6 +275,29 @@ onMounted(() => {
         </Form>
       </Card>
     </div>
+
+    <Dialog
+      v-model:visible="showPasswordDialog"
+      header="修改密码"
+      :confirm-btn="{ content: '确认', theme: 'primary', loading: passwordLoading }"
+      :cancel-btn="{ content: '取消' }"
+      @confirm="handleChangePassword"
+      width="480px"
+    >
+      <Form :data="passwordForm" :rules="passwordRules" label-width="100px">
+        <FormItem label="当前密码" name="oldPassword">
+          <Input v-model="passwordForm.oldPassword" type="password" placeholder="请输入当前密码" clearable />
+        </FormItem>
+
+        <FormItem label="新密码" name="newPassword">
+          <Input v-model="passwordForm.newPassword" type="password" placeholder="请输入新密码（至少6位）" clearable />
+        </FormItem>
+
+        <FormItem label="确认密码" name="confirmPassword">
+          <Input v-model="passwordForm.confirmPassword" type="password" placeholder="请再次输入新密码" clearable />
+        </FormItem>
+      </Form>
+    </Dialog>
   </WebLayout>
 </template>
 

@@ -53,12 +53,20 @@ type RegisterFormModel = {
   confirmPassword: string
 }
 
+type ResetPasswordFormModel = {
+  phone: string
+  code: string
+  newPassword: string
+  confirmPassword: string
+}
+
 const router = useRouter()
-const mode = ref<'login' | 'register'>('login')
+const mode = ref<'login' | 'register' | 'reset'>('login')
 const loginType = ref<'password' | 'sms'>('password')
 const loginFormRef = ref<FormInstanceFunctions>()
 const registerFormRef = ref<FormInstanceFunctions>()
 const smsLoginFormRef = ref<FormInstanceFunctions>()
+const resetPasswordFormRef = ref<FormInstanceFunctions>()
 
 const showCaptchaDialog = ref(false)
 const captchaPhone = ref('')
@@ -92,10 +100,19 @@ const smsLoginForm = reactive<SmsLoginFormModel>({
   code: '',
 })
 
+const resetPasswordForm = reactive<ResetPasswordFormModel>({
+  phone: '',
+  code: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
 const smsCountdown = ref(0)
 const registerSmsCountdown = ref(0)
+const resetSmsCountdown = ref(0)
 let smsTimer: number | undefined
 let registerSmsTimer: number | undefined
+let resetSmsTimer: number | undefined
 
 const captchaImageRaw = ref('')
 
@@ -165,6 +182,30 @@ const registerRules: FormProps['rules'] = {
   ],
 }
 
+const resetPasswordRules: FormProps['rules'] = {
+  phone: [
+    { required: true, message: '请输入手机号' },
+    {
+      validator: (val: string) => /^1\d{10}$/.test(val),
+      message: '请输入有效手机号',
+      trigger: 'blur',
+    },
+  ],
+  code: [{ required: true, message: '请输入短信验证码' }],
+  newPassword: [
+    { required: true, message: '请输入新密码' },
+    { min: 6, message: '密码至少6位' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码' },
+    {
+      validator: (val: string) => val === resetPasswordForm.newPassword,
+      message: '两次输入的密码不一致',
+      trigger: 'blur',
+    },
+  ],
+}
+
 const resetForms = () => {
   loginForm.username = ''
   loginForm.password = ''
@@ -177,13 +218,29 @@ const resetForms = () => {
   registerForm.code = ''
   registerForm.password = ''
   registerForm.confirmPassword = ''
+  resetPasswordForm.phone = ''
+  resetPasswordForm.code = ''
+  resetPasswordForm.newPassword = ''
+  resetPasswordForm.confirmPassword = ''
   loginFormRef.value?.reset()
   smsLoginFormRef.value?.reset()
   registerFormRef.value?.reset()
+  resetPasswordFormRef.value?.reset()
 }
 
 const toggleMode = () => {
-  mode.value = mode.value === 'login' ? 'register' : 'login'
+  if (mode.value === 'login') {
+    mode.value = 'register'
+  } else if (mode.value === 'register') {
+    mode.value = 'login'
+  } else {
+    mode.value = 'login'
+  }
+  resetForms()
+}
+
+const switchToReset = () => {
+  mode.value = 'reset'
   resetForms()
 }
 
@@ -219,6 +276,22 @@ const setRegisterCountdown = (seconds: number) => {
   }, 1000)
 }
 
+const setResetCountdown = (seconds: number) => {
+  resetSmsCountdown.value = seconds
+  if (resetSmsTimer) {
+    window.clearInterval(resetSmsTimer)
+    resetSmsTimer = undefined
+  }
+  if (seconds <= 0) return
+  resetSmsTimer = window.setInterval(() => {
+    resetSmsCountdown.value -= 1
+    if (resetSmsCountdown.value <= 0 && resetSmsTimer) {
+      window.clearInterval(resetSmsTimer)
+      resetSmsTimer = undefined
+    }
+  }, 1000)
+}
+
 const handleSendSms = () => {
   const phone = (smsLoginForm.phone || '').trim()
   if (!/^1\d{10}$/.test(phone)) {
@@ -243,6 +316,22 @@ const handleSendRegisterSms = () => {
   }
 
   if (registerSmsCountdown.value > 0) {
+    return
+  }
+
+  captchaPhone.value = phone
+  captchaScene.value = 'REGISTER'
+  showCaptchaDialog.value = true
+}
+
+const handleSendResetSms = () => {
+  const phone = (resetPasswordForm.phone || '').trim()
+  if (!/^1\d{10}$/.test(phone)) {
+    showError('请先输入正确的手机号')
+    return
+  }
+
+  if (resetSmsCountdown.value > 0) {
     return
   }
 
@@ -324,6 +413,34 @@ const onRegisterSubmit: FormProps['onSubmit'] = async ({ validateResult, firstEr
   }
 }
 
+const handleResetPassword = async () => {
+  showLoading('重置中...')
+
+  try {
+    const { phone, code, newPassword } = resetPasswordForm
+    await api.accountService.resetPassword({
+      body: { phone, code, newPassword, scene: 'REGISTER' },
+    })
+
+    showSuccess('密码重置成功，请使用新密码登录')
+    mode.value = 'login'
+    resetForms()
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '重置密码失败'
+    showError(errorMessage)
+  } finally {
+    hideLoading()
+  }
+}
+
+const onResetPasswordSubmit: FormProps['onSubmit'] = async ({ validateResult, firstError }) => {
+  if (validateResult === true) {
+    await handleResetPassword()
+  } else {
+    showError(firstError || '请完善重置信息')
+  }
+}
+
 const handleCaptchaSuccess = async () => {
   showLoading('发送中...')
   try {
@@ -336,6 +453,8 @@ const handleCaptchaSuccess = async () => {
     showSuccess('验证码已发送')
     if (captchaScene.value === 'LOGIN') {
       setCountdown(60)
+    } else if (mode.value === 'reset') {
+      setResetCountdown(60)
     } else {
       setRegisterCountdown(60)
     }
@@ -360,6 +479,10 @@ onUnmounted(() => {
     window.clearInterval(registerSmsTimer)
     registerSmsTimer = undefined
   }
+  if (resetSmsTimer) {
+    window.clearInterval(resetSmsTimer)
+    resetSmsTimer = undefined
+  }
 })
 </script>
 
@@ -367,8 +490,8 @@ onUnmounted(() => {
   <div class="auth-container">
     <div class="auth-card">
       <div class="auth-header">
-        <h1>{{ mode === 'login' ? '欢迎回来' : '创建账户' }}</h1>
-        <p>{{ mode === 'login' ? '登录您的账户' : '注册新账户' }}</p>
+        <h1>{{ mode === 'login' ? '欢迎回来' : mode === 'register' ? '创建账户' : '重置密码' }}</h1>
+        <p>{{ mode === 'login' ? '登录您的账户' : mode === 'register' ? '注册新账户' : '通过手机号重置密码' }}</p>
       </div>
 
       <div class="form-wrapper">
@@ -452,7 +575,7 @@ onUnmounted(() => {
         </TForm>
 
         <TForm
-          v-else
+          v-else-if="mode === 'register'"
           ref="registerFormRef"
           :data="registerForm"
           :rules="registerRules"
@@ -518,12 +641,78 @@ onUnmounted(() => {
             <TButton class="submit-button" theme="primary" type="submit" size="large" block>注册</TButton>
           </TFormItem>
         </TForm>
+
+        <TForm
+          v-else
+          ref="resetPasswordFormRef"
+          :data="resetPasswordForm"
+          :rules="resetPasswordRules"
+          colon
+          :label-width="0"
+          :show-error-message="true"
+          @submit="onResetPasswordSubmit"
+        >
+          <TFormItem name="phone">
+            <TInput v-model="resetPasswordForm.phone" size="large" type="tel" clearable placeholder="请输入手机号">
+              <template #prefix-icon>
+                <CallIcon />
+              </template>
+            </TInput>
+          </TFormItem>
+
+          <TFormItem name="code">
+            <div class="sms-row">
+              <TInput v-model="resetPasswordForm.code" size="large" clearable placeholder="请输入短信验证码" />
+              <TButton class="sms-button" variant="outline" :disabled="resetSmsCountdown > 0" @click="handleSendResetSms">
+                {{ resetSmsCountdown > 0 ? `${resetSmsCountdown}s` : '发送验证码' }}
+              </TButton>
+            </div>
+          </TFormItem>
+
+          <TFormItem name="newPassword">
+            <TInput
+              v-model="resetPasswordForm.newPassword"
+              size="large"
+              type="password"
+              clearable
+              placeholder="请输入新密码（至少6位）"
+            >
+              <template #prefix-icon>
+                <LockOnIcon />
+              </template>
+            </TInput>
+          </TFormItem>
+
+          <TFormItem name="confirmPassword">
+            <TInput
+              v-model="resetPasswordForm.confirmPassword"
+              size="large"
+              type="password"
+              clearable
+              placeholder="请再次输入新密码"
+            >
+              <template #prefix-icon>
+                <LockOnIcon />
+              </template>
+            </TInput>
+          </TFormItem>
+
+          <TFormItem>
+            <TButton class="submit-button" theme="primary" type="submit" size="large" block>重置密码</TButton>
+          </TFormItem>
+        </TForm>
       </div>
 
       <div class="switcher">
-        <span>{{ mode === 'login' ? '还没有账户？' : '已有账户？' }}</span>
+        <span v-if="mode === 'login'">还没有账户？</span>
+        <span v-else-if="mode === 'register'">已有账户？</span>
+        <span v-else>记起密码了？</span>
         <a class="switcher-link" href="#" @click.prevent="toggleMode">
           {{ mode === 'login' ? '立即注册' : '立即登录' }}
+        </a>
+        <span v-if="mode === 'login'" style="margin-left: 16px; color: #5f6672;">忘记密码？</span>
+        <a v-if="mode === 'login'" class="switcher-link" href="#" @click.prevent="switchToReset">
+          重置密码
         </a>
       </div>
     </div>
